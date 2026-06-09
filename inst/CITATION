@@ -1,0 +1,21 @@
+bibentry(
+    bibtype      = "Misc",
+    title        = "Genetic Study of Plant Mixtures with {plantmix}",
+    author       = c(person(given = "Timothee",
+                            family = "Flutre"),
+                     person(given = "Jerome",
+                            family = "Enjalbert"),
+                     person(given = "Emma",
+                            family = "Forst"),
+                     person(given = "Maxence",
+                            family = "Remerand"),
+                     person(given = "Jemay",
+                            family = "Salomon")
+                     ),
+    url          = "https://moulon.inrae.fr/logiciels/plantmix/",
+
+    header       = "To cite plantmix in publications use:",
+    textVersion  =
+      paste("Flutre T et al. (2026). Genetic Study of Plant Mixtures with plantmix.",
+            "URL https://moulon.inrae.fr/logiciels/plantmix/")
+)

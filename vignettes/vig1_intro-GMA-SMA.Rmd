@@ -1,0 +1,454 @@
+---
+title: "1) Introduction to GMA-SMA models"
+author: "T. Flutre, J. Enjalbert"
+abstract: "This document aims at introducing various GMA-SMA models, most notably those from Forst et al (2019) for varietal mixtures, notably by showing how plant-plant interactions are encoded into the design matrices."
+date: "`r format(Sys.time(), '%d/%m/%Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 5
+    toc_float: true
+    number_sections: TRUE
+colorlinks: true
+urlcolor: blue
+editor_options: 
+  chunk_output_type: console
+vignette: >
+  %\VignetteIndexEntry{1) Introduction to GMA-SMA models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, echo=FALSE}
+suppressPackageStartupMessages(library(knitr))
+opts_chunk$set(
+  echo = TRUE, warning = TRUE, message = TRUE, cache = FALSE,
+  fig.align = "center", collapse = TRUE
+)
+opts_knit$set(progress = TRUE, verbose = TRUE)
+```
+
+
+
+# Preamble
+
+```{r}
+suppressPackageStartupMessages(library(plantmix))
+```
+
+```{r time_0, echo=FALSE}
+## Execution time (see the appendix):
+t0 <- proc.time()
+```
+\
+
+
+# Models
+
+## Overview
+
+The phenotypic variation among varietal mixtures can be decomposed into contributions of general and specific mixing abilities, noted GMA and SMA respectively.
+Note that these models tackle the case where only a single phenotypic observation is available per plot of a mixed stand: there is no access to genotypic performances within the mixture.
+
+Forst et al (2019) introduced three models to *jointly* analyze stands of any order, that is, monovarietal stands (order 1) and mixed stands (order > 1).
+This article also distinguished between inter-genotypic interactions, noted $SMA_{ij}$, and intra-genotypic interactions, noted $SMA_{ii}$.
+Moreover, all models were framed into the formalism of linear mixed models, GMAs and SMAs being random effects, in order to deal with incomplete designs.
+
+All three models have a contribution of $GMA$, but they distinguish from each other based on the kind of interactions that are explicitly modeled:
+
+* model 1 assumes no interaction (no $SMA$);
+
+* model 2 assumes inter-genotypic interactions ($SMA_{ij}$) in mixed stands and intra-genotypic interactions ($SMA_{ii}$) in monovarietal stands only, both kinds of interactions coming from a single distribution;
+
+* model 3 assumes inter-genotypic interactions in mixed stands ($SMA_{ij}$) and intra-genotypic interactions ($SMA_{ii}$) in both monovarietal and mixed stands, and here again with both kinds of interactions coming from a single distribution.
+
+Other models are also conceivable, such as:
+
+* 2', a variant of model 2: $SMA_{ij}$ in mixed stands and no other interactions;
+
+* 2'', another variant of model 2: $SMA_{ij}$ in mixed stands and $SMA_{ii}$ in monovarietal stands, but with a different distribution for each kind of interactions;
+
+* 3', a variant of model 3: $SMA_{ij}$ in mixed stands and $SMA_{ii}$ in both monovarietal and mixed stands, but with a different distribution for each kind of interactions.
+
+## Notations
+
+* $n$ is the index of a given plot that can contain a monovarietal or a mixed stand;
+
+* $K(n)$ is the number of genotypes in plot $n$ (1 if monovarietal stand, >1 if mixed);
+
+* $y_{nb}$ is the response variable corresponding to the yield of plot $n$ in block $b$;
+
+* $\mu$ is the intercept;
+
+* $\alpha_b$ is the effect of block $b$, modeled as "fixed";
+
+* $GMA_{k(n)}$ is the *general mixture ability* of genotype $k$ in plot $n$, modeled as "random";
+
+* $SMA_{k(n)k'(n)}$ is the *specific mixture ability* of the genotype pair $k$ and $k'$ in plot $n$, modeled as "random".
+
+## Major assumptions
+
+1. Only first-order (i.e., pairwise) interactions are taken into account; high-order interactions are ignored.
+
+2. Genotypes in mixed stands are assumed to be sowned in equal proportions, $1 / K(n)$, and to be harvested in the same proportions (but the proportions can be adapted as indicated at the end of section 4.7 in the article).
+
+3. The magnitude of interactions is inversely proportional to mixture size.
+
+## Model 1
+
+There are only GMA effects and no SMA effect:
+
+\[
+y_{nb} = \mu + \alpha_b + \frac{1}{K(n)} \sum_{k(n)=1}^{K(n)} GMA_{k(n)} + \epsilon_{nb}
+\]
+
+## Model 2
+
+There are both GMA and SMA effects:
+
+* in mixed stands, SMAs only contain *inter-genotypic* interactions;
+
+* monovarietal stands also have SMAs, corresponding to *intra-genotypic* interactions.
+
+\[
+y_{nb} = \mu + \alpha_b + \frac{1}{K(n)} \sum_{k(n)=1}^{K(n)} GMA_{k(n)} + \frac{1}{C_{K(n)}^2} \sum_{k(n)=1}^{K(n)-1} \sum_{k'(n)=k(n)+1}^{K(n)} SMA_{k(n)k'(n)} + \epsilon_{nb}
+\]
+
+where $C_{K(n)}^2$ corresponds to the number of [combinations](https://en.wikipedia.org/wiki/Combination) of $K(n)$ genotypes taken two at a time (used for mixed stands only).
+
+Note that interactions are not oriented, i.e., $SMA_{k(n)k'(n)} = SMA_{k'(n)k(n)}$.
+
+## Model 3
+
+There are also both GMA and SMA effects:
+
+* in mixed stands, SMAs contains *inter-genotypic* interactions as well as *intra-genotypic* interactions;
+
+* monovarietal stands also have SMAs, corresponding to *intra-genotypic* interactions.
+
+\[
+y_{nb} = \mu + \alpha_b + \frac{1}{K(n)} \sum_{k(n)=1}^{K(n)} GMA_{k(n)} + \frac{1}{K(n)^2} \sum_{k(n)=1}^{K(n)} \sum_{k'(n)=1}^{K(n)} SMA_{k(n)k'(n)} + \epsilon_{nb}
+\]
+
+## Models in vector form
+
+All three models can be written in vector form:
+
+\[
+\boldsymbol{y} = X \, \boldsymbol{\beta} + Z_G \, \boldsymbol{GMA} + (\, Z_S \, \boldsymbol{SMA} \, ) + \boldsymbol{\epsilon}
+\]
+
+where vectors are in bold.
+
+The design matrices are $X$, $Z_G$ and $Z_S$.
+They make the correspondence between $\boldsymbol{y}$ and the levels of the effects, respectively $\boldsymbol{\beta}$ (fixed), $\boldsymbol{GMA}$ (random) and $\boldsymbol{SMA}$ (random).
+All three matrices have as many rows as the length of $\boldsymbol{y}$.
+
+* $\boldsymbol{GMA} \sim \mathcal{N}(\boldsymbol{0}, \sigma^2_{GMA} A_1)$ where $A_1$ is known
+
+* $\boldsymbol{SMA} \sim \mathcal{N}(\boldsymbol{0}, \sigma^2_{SMA} A_2)$ for both $SMA_{ij}$ and $SMA_{ii}$ where $A_2$ is also known
+
+* $\boldsymbol{\epsilon} \sim \mathcal{N}\boldsymbol{0}, \sigma^2_e Id)$
+
+## Other models
+
+* model 2', with $SMA_{ij}$ in mixed stands and no other interactions: same as model 2 except that there is no $SMA_{ii}$
+
+* model 2'', with $SMA_{ij}$ in mixed stands and $SMA_{ii}$ only in monovarietal stands, with a different distribution for each kind of interactions: same as model 2 except that $\boldsymbol{SMA}_{ij} \sim \mathcal{N}(\boldsymbol{0}, \sigma^2_{SMA_{ij}} A_2)$ and $\boldsymbol{SMA}_{ii} \sim \mathcal{N}(\boldsymbol{0}, \sigma^2_{SMA_{ii}} A_2)$
+
+* model 3', with $SMA_{ij}$ in mixed stands and $SMA_{ii}$ in both monovarietal and mixed stands, with a different distribution for each kind of interactions: same as model 3 except that $\boldsymbol{SMA}_{ij} \sim \mathcal{N}(\boldsymbol{0}, \sigma^2_{SMA_{ij}} A_2)$ and $\boldsymbol{SMA}_{ii} \sim \mathcal{N}(\boldsymbol{0}, \sigma^2_{SMA_{ii}} A_2)$
+
+## Examples of design matrices
+
+For pedagogical purposes, let us imagine a design with three genotypes (`g1`, `g2` and `g3`) containing one monovarietal stand (`stand1`), one two-way mixture (`stand2`) and one three-way mixture (`stand3`).
+
+```{r, echo=FALSE}
+dat <- data.frame(
+  id = c("stand1", "stand2", "stand3"),
+  genos = c("g1", "g1-g2", "g1-g2-g3"),
+  type = c("monovarietal", "mixed", "mixed"),
+  order = c(1, 2, 3)
+)
+knitr::kable(dat, row.names = TRUE)
+```
+
+### Design matrix for GMAs
+
+$Z_G$ has as many columns as the number of genotypes in the experimental design.
+From the example data frame above, $Z_G$ hence has 3 rows and 3 columns.
+
+Weights:
+
+* for a monovarietal stand: $1 \, / \, K(n) = 1 \, / \, 1$
+
+* for a binary mixture: $1 \, / \, K(n) = 1 \, / \, 2$
+
+* for a ternary mixture: $1 \, / \, K(n) = 1 \, / \, 3$
+
+* etc
+
+```{r, echo=FALSE}
+Z_G <- mkZGMA(df = dat, col = "genos", sep = "-")
+rownames(Z_G) <- dat$genos
+knitr::kable(as.data.frame(Z_G), digits = 2, row.names = TRUE)
+```
+
+### Design matrix for SMAs
+
+$Z_S$ has as many columns as the total number of possible intra-genotypic interactions plus the total number of possible (pairwise) inter-genotypic interactions.
+From the example data frame above, $Z_S$ hence has $3$ rows and $3 + C_3^2 = 6$ columns.
+
+#### Model 2
+
+Weights:
+
+* for a binary mixture: $1 \, / \, C_2^2 = 1 \, / \, 1$
+
+* for a ternary mixture: $1 \, / \, C_3^2 = 1 \, / \, 3$
+
+* for a quaternary mixture: $1 \, / \, C_4^2 = 1 \, / \, 6$
+
+* etc
+
+```{r, echo=FALSE}
+Z_S <- mkZSMA(df = dat, col = "genos", sep = "-", inc_SMA_ii = "only_pur")
+rownames(Z_S) <- dat$genos
+knitr::kable(as.data.frame(Z_S), digits = 2, row.names = TRUE)
+```
+
+#### Model 3
+
+Weights:
+
+* for a binary mixture: $1 \, / \, K(n)^2 = 1 \, / \, 4$
+
+* for a ternary mixture: $1 \, / \, K(n)^2 = 1 \, / \, 9$
+
+```{r, echo=FALSE}
+Z_S <- mkZSMA(df = dat, col = "genos", sep = "-", inc_SMA_ii = "pur_mix")
+rownames(Z_S) <- dat$genos
+knitr::kable(as.data.frame(Z_S), digits = 2, row.names = TRUE)
+```
+
+#### Model 2'
+
+Same as model 2 but no $SMA_{ii}$:
+
+```{r, echo=FALSE}
+Z_S <- mkZSMA(df = dat, col = "genos", sep = "-", inc_SMA_ii = "no")
+rownames(Z_S) <- dat$genos
+knitr::kable(as.data.frame(Z_S), digits = 2, row.names = TRUE)
+```
+
+#### Model 2''
+
+Same as model 2 but $SMA_{ii}$ and $SMA_{ij}$ with different distributions:
+
+```{r, echo=FALSE}
+Z_S <- mkZSMA(df = dat, col = "genos", sep = "-", inc_SMA_ii = "only_pur")
+rownames(Z_S) <- dat$genos
+isMono <- (sapply(strsplit(colnames(Z_S), "-"), anyDuplicated) == 2)
+```
+
+Design matrix for $SMA_{ij}$ only:
+```{r, echo=FALSE}
+Z_S_ij <- Z_S[, !isMono]
+knitr::kable(as.data.frame(Z_S_ij), digits = 2, row.names = TRUE)
+```
+
+Design matrix for $SMA_{ii}$ only:
+```{r, echo=FALSE}
+Z_S_ii <- Z_S[, isMono]
+knitr::kable(as.data.frame(Z_S_ii), digits = 2, row.names = TRUE)
+```
+
+#### Model 3'
+
+Same as model 3 but $SMA_{ii}$ and $SMA_{ij}$ with different distributions:
+
+```{r, echo=FALSE}
+Z_S <- mkZSMA(df = dat, col = "genos", sep = "-", inc_SMA_ii = "pur_mix")
+rownames(Z_S) <- dat$genos
+isMono <- (sapply(strsplit(colnames(Z_S), "-"), anyDuplicated) == 2)
+```
+
+Design matrix for $SMA_{ij}$ only:
+```{r, echo=FALSE}
+Z_S_ij <- Z_S[, !isMono]
+knitr::kable(as.data.frame(Z_S_ij), digits = 2, row.names = TRUE)
+```
+
+Design matrix for $SMA_{ii}$ only:
+```{r, echo=FALSE}
+Z_S_ii <- Z_S[, isMono]
+knitr::kable(as.data.frame(Z_S_ii), digits = 2, row.names = TRUE)
+```
+
+
+# Data simulation
+
+For the purpose of illustration, varietal mixtures will be assembled from a panel of 25 genotypes.
+Only 75 binary, balanced mixtures will be observed, among all 300 possible mixtures.
+Phenotypes will be simulated according to model 2 (see above), organized into a field trial with each mixture present in each block.
+
+Ignored below, but available in the inference functions:
+
+* using data in monovarietal conditions while analyzing mixture data;
+
+* taking genomic relationships into account.
+
+## Sparse design
+
+```{r}
+nbGenos <- 25
+levGenos <- sprintf(
+  fmt = paste0("geno%0", floor(log10(nbGenos)) + 1, "i"),
+  1:nbGenos
+)
+nbMixes <- 75 # only binary and balanced
+design <- getDesignBinaryVarMix(levGenos, nbMixes, seed = 12345)
+tmp <- getMixturesPerGeno(getMixtureList(design$combs))
+table(sapply(tmp, length)) # each genotype is in the same nb of mixtures -> balanced design
+```
+
+```{r, echo=FALSE}
+## plotDesignVarMix(design$graph, levGenos)
+plotDiallel(design$diallel, main = paste0(
+  nbGenos, " genotypes and ",
+  nbMixes, " binary mixtures"
+))
+```
+
+```{r}
+nbBlocks <- 3
+levBlocks <- LETTERS[1:nbBlocks]
+dat <- do.call(rbind, lapply(levBlocks, function(block) {
+  data.frame(
+    stand = paste0(design$combs$comp1, "_", design$combs$comp2),
+    block = block,
+    stringsAsFactors = TRUE
+  )
+}))
+str(dat)
+```
+
+## Design matrices
+
+The design matrices can be generated with the `mkZGMA` and `mkZSMA` functions.
+See also `mkAllZSMA` to make the SMA design matrices all at once.
+```{r}
+listContr <- list(block = "contr.sum")
+X <- model.matrix(~ 1 + block, data = dat, contrasts = listContr)
+Z_GMA <- mkZGMA(dat, "stand", sep = "_")
+Z_SMA <- mkZSMA(dat, "stand", sep = "_", inc_SMA_ii = "no")
+```
+
+## Parameters
+
+```{r}
+truth <- list(
+  "intercept" = 80,
+  "var_GMA" = 10,
+  "var_SMA" = 2,
+  "var_error" = 1
+)
+set.seed(1234)
+truth[["blockEffs"]] <- sample(x = c(-1, 1), size = nbBlocks - 1, replace = TRUE) *
+  rnorm(n = nbBlocks - 1, mean = 3, sd = 5)
+truth[["GMA"]] <- rnorm(n = nbGenos, mean = 0, sd = sqrt(truth$var_GMA))
+truth[["SMA"]] <- rnorm(n = nbMixes, mean = 0, sd = sqrt(truth$var_SMA))
+truth[["errors"]] <- rnorm(n = nrow(dat), mean = 0, sd = sqrt(truth$var_error))
+```
+
+## Phenotypes
+
+```{r}
+y <- X %*% c(truth$intercept, truth$blockEffs) +
+  Z_GMA %*% truth$GMA + Z_SMA %*% truth$SMA +
+  truth$errors
+dat$yield <- y[, 1]
+
+boxplot(yield ~ block, data = dat, las = 1, main = "Simulated data")
+```
+
+
+# Inference
+
+Models 1 and 2 will be fitted and compared.
+
+In this first vignette, only the `lme4` package will be used, but see the second vignette that shows how to use `TMB` allowing to provide a genomic relationship matrix and to quantify the uncertainty around estimates of variance components.
+
+## Model fits
+
+```{r}
+listZ1 <- list("GMA" = mkZGMA(dat, "stand", sep = "_"))
+system.time(
+  fit1 <- fitGMASMA(yield ~ 1 + block, dat, listZ1, pkg = "lme4", contrasts = listContr)
+)
+
+listZ2 <- list(
+  "GMA" = mkZGMA(dat, "stand", sep = "_"),
+  "SMA" = mkZSMA(dat, "stand", sep = "_", inc_SMA_ii = "no")
+)
+system.time(
+  fit2 <- fitGMASMA(yield ~ 1 + block, dat, listZ2, pkg = "lme4", contrasts = , listContr)
+)
+```
+
+## Checks
+
+```{r, fig.width=12}
+BLUEs <- fixef(fit2)
+data.frame(
+  "true" = c(truth$intercept, truth$blockEffs),
+  "estim" = BLUEs
+)
+
+estV <- as.data.frame(lme4::VarCorr(fit2))
+data.frame(
+  "true" = c(truth$var_GMA, truth$var_SMA, truth$var_error),
+  "estim" = c(estV$vcov[estV$grp == "GMA"], estV$vcov[estV$grp == "SMA"], estV$vcov[estV$grp == "Residual"]),
+  row.names = c("GMA", "SMA", "error")
+)
+
+BLUPs <- ranef(fit2)
+cor(truth$GMA, BLUPs$GMA[, "(Intercept)"])
+cor(truth$SMA, BLUPs$SMA[, "(Intercept)"])
+op <- par(mfrow = c(1, 2))
+for (MA in c("GMA", "SMA")) {
+  plot(BLUPs[[MA]][, "(Intercept)"], truth[[MA]],
+    xlab = paste0("BLUP(", MA, ")"), ylab = paste0("true ", MA),
+    main = "Accuracy with lme4", las = 1, pch = 19
+  )
+  abline(a = 0, b = 1, v = 0, h = 0, lty = 2)
+  abline(lm(truth[[MA]] ~ BLUPs[[MA]][, "(Intercept)"]), col = "red")
+}
+par(op)
+```
+
+## Model comparisons
+
+```{r}
+fits <- list("mod1" = fit1, "mod2" = fit2)
+t(summarizeGMASMAs(fits))
+```
+
+As expected, model 2 is better than model 1 on this example (as it was used to simulate it).
+
+
+
+# Reference
+
+See the article for more details:
+
+* Forst E, Enjalbert J, Allard V, Ambroise C, Krissaane I, Mary-Huard T, Robin S, Goldringer I. 2019. A generalized statistical framework to assess mixing ability from incomplete mixing designs using binary or higher order variety mixtures and application to wheat. Field Crops Research. 242:107571. doi: [10.1016/j.fcr.2019.107571](https://doi.org/10.1016/j.fcr.2019.107571).
+
+
+
+# Appendix
+
+```{r}
+t1 <- proc.time()
+t1 - t0
+print(sessionInfo(), locale = FALSE)
+```
