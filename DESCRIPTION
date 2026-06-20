@@ -1,6 +1,6 @@
 Package: plantmix
 Title: Genetic Study of Plant Mixtures
-Version: 1.0.2
+Version: 1.0.3
 Authors@R: c(person("Timothee", "Flutre", email="timothee.flutre@inrae.fr", role=c("aut", "ctb", "cre"), comment=c(ORCID="0000-0003-4489-4782")),
     person("", "INRAE", role=c("cph","fnd")),
     person("Jerome", "Enjalbert", email="jerome.enjalbert@inrae.fr", role=c("ctb"), comment=c(ORCID="0000-0003-0408-2253")),
@@ -11,7 +11,7 @@ Maintainer: Timothee Flutre <timothee.flutre@inrae.fr>
 Description: Fit linear mixed models dedicated to the genetic study of plant mixtures, such as those based on general and specific mixing abilities (GMA-SMA) as well as direct and social breeding values (DBV-SBV), also known as direct and indirect genetic effects (DGE-IGE). More details in Forst et al (2019, <doi:10.1016/j.fcr.2019.107571>) for GMA-SMA models, and Salomon et al (2026, <doi:10.64898/2026.03.27.714849>) for DBV-SBV models. The package also provides functions to optimize experimental designs, simulate data sets and compute interaction indices.
 Depends: R (>= 4.0.0), ggplot2, lme4
 Imports: graphics, igraph, MASS, Matrix, methods, Rcpp (>= 1.0.13),
-        stats, TMB (>= 1.9.17), utils
+        stats, TMB (>= 1.9.21), utils
 License: AGPL-3
 Copyright: INRAE
 Encoding: UTF-8
@@ -22,7 +22,7 @@ Additional_repositories: https://famuvie.github.io/breedR,
 VignetteBuilder: knitr
 LinkingTo: TMB, Rcpp, RcppEigen
 NeedsCompilation: yes
-Packaged: 2026-06-04 19:04:01 UTC; tflutre
+Packaged: 2026-06-20 22:27:00 UTC; tflutre
 Author: Timothee Flutre [aut, ctb, cre] (ORCID:
     <https://orcid.org/0000-0003-4489-4782>),
   INRAE [cph, fnd],
@@ -31,4 +31,4 @@ Author: Timothee Flutre [aut, ctb, cre] (ORCID:
   Maxence Remerand [ctb] (ORCID: <https://orcid.org/0009-0007-3217-5613>),
   Jemay Salomon [ctb] (ORCID: <https://orcid.org/0000-0003-4454-7916>)
 Repository: CRAN
-Date/Publication: 2026-06-09 15:50:07 UTC
+Date/Publication: 2026-06-20 23:10:02 UTC

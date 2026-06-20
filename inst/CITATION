@@ -16,6 +16,6 @@ bibentry(
 
     header       = "To cite plantmix in publications use:",
     textVersion  =
-      paste("Flutre T et al. (2026). Genetic Study of Plant Mixtures with plantmix.",
+      paste("Flutre T et al. Genetic Study of Plant Mixtures with plantmix.",
             "URL https://moulon.inrae.fr/logiciels/plantmix/")
 )

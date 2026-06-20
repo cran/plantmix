@@ -23,8 +23,9 @@
 getMixtureList <- function(mixtures, sep = NULL) {
   out <- list()
 
-  if (is.factor(mixtures))
+  if (is.factor(mixtures)) {
     mixtures <- as.character(mixtures)
+  }
 
   if (is.vector(mixtures) & !is.list(mixtures)) {
     stopifnot(!is.null(sep))
@@ -289,14 +290,17 @@ pivotMixData2Wide <- function(df, colIDstand = "ID",
   )
 
   ## add "neighbors" column if needed:
-  if (any(is.null(colIDneighbors),
-          ! colIDneighbors %in% colnames(df))) {
-    stopifnot(! is.null(sepFocalNeighbors))
-    if (is.null(colIDneighbors))
+  if (any(
+    is.null(colIDneighbors),
+    !colIDneighbors %in% colnames(df)
+  )) {
+    stopifnot(!is.null(sepFocalNeighbors))
+    if (is.null(colIDneighbors)) {
       colIDneighbors <- "neighbor"
-    stopifnot(! colIDneighbors %in% colnames(df))
+    }
+    stopifnot(!colIDneighbors %in% colnames(df))
     mix2genos <- getMixtureList(df[[colIDstand]], sep = sepFocalNeighbors)
-    neighbors <- Map(function(i){
+    neighbors <- Map(function(i) {
       mix2genos[[i]][which(mix2genos[[i]] != df[[colIDfocal]][i])]
     }, 1:nrow(df))
     df[[colIDneighbors]] <- sapply(neighbors, paste, collapse = sepFocalNeighbors)
@@ -1563,8 +1567,9 @@ mmDGEIGE <- function(formula, data, listZ, listVCov, REML = TRUE,
     }
     if (!is.na(loglik)) {
       if (abs(fit$NullModel$`LogLik (Reml)` - loglik) < CritLogLik) {
-        if (verbose)
+        if (verbose) {
           cat("break because of CritLogLik at iter ", iter)
+        }
         break
       }
     }
@@ -1575,8 +1580,9 @@ mmDGEIGE <- function(formula, data, listZ, listVCov, REML = TRUE,
     } else {
       if (fit.var[1:2][-MinVar] < 1e-4) {
         if (First) {
-          if (verbose)
+          if (verbose) {
             cat("somewhere in between ", Alpha, " and ", Alpha / 0.9, "...\n")
+          }
           First <- FALSE
         }
         Alpha <- 1.02 * Alpha
@@ -1586,8 +1592,9 @@ mmDGEIGE <- function(formula, data, listZ, listVCov, REML = TRUE,
     }
     iter <- iter + 1
     if (iter > MaxIter) {
-      if (verbose)
+      if (verbose) {
         cat("break because of MaxIter at iter ", iter)
+      }
       break
     }
   }

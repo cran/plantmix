@@ -200,11 +200,64 @@ fitDBVSBVinter_prepIn <- function(listY, listX, listZ, listVCov, REML = TRUE,
 
 ##' @noRd
 fitDBVSBVinter_prepOut <- function(outTmb, listData, sep = "_") {
-  names(outTmb$report$BV_IC_f) <- paste0(
-    rep(c("DBV","SBV"), each = ncol(listData$Z_DS_f)),
-    sep,
-    colnames(listData$Z_DS_f)
+  idx <- which(rownames(outTmb$sry_sdr) == "B_IC")
+  idx <- idx[1:(ncol(listData$X_IC) * ncol(listData$Y_IC))]
+  outTmb$B_IC <- outTmb$sry_sdr[idx, ]
+  rownames(outTmb$B_IC) <- paste(
+    rownames(outTmb$B_IC),
+    rep(colnames(listData$X_IC),
+      times = ncol(listData$Y_IC)
+    ),
+    "on species",
+    rep(1:ncol(listData$Y_IC),
+      each = ncol(listData$X_IC)
+    )
   )
+
+  idx <- which(rownames(outTmb$sry_sdr) %in% c("vars_BV_f", "cor_BV_f"))
+  stopifnot(length(idx) == 3)
+  outTmb$vcov_BV_f <- outTmb$sry_sdr[idx, ]
+  rownames(outTmb$vcov_BV_f)[1:2] <- c("var_DBV_f", "var_SBV_IC_f")
+
+  idx <- which(rownames(outTmb$sry_sdr) == "vars_E_IC")
+  stopifnot(length(idx) == ncol(listData$Y_IC))
+  outTmb$vcov_E_IC <- outTmb$sry_sdr[idx, ]
+  rownames(outTmb$vcov_E_IC) <- paste(
+    rownames(outTmb$vcov_E_IC),
+    "of species",
+    1:ncol(listData$Y_IC)
+  )
+  idx <- which(rownames(outTmb$sry_sdr) == "Cor_E_IC")
+  stopifnot(length(idx) == ncol(listData$Y_IC) * ncol(listData$Y_IC))
+  idx_offdiag <- which(upper.tri(matrix(NA, ncol(listData$Y_IC), ncol(listData$Y_IC))))
+  idx <- idx[idx_offdiag]
+  outTmb$vcov_E_IC <- rbind(
+    outTmb$vcov_E_IC,
+    outTmb$sry_sdr[idx, ]
+  )
+  idx <- (ncol(listData$Y_IC) + 1):(nrow(outTmb$vcov_E_IC))
+  rownames(outTmb$vcov_E_IC)[idx] <- "cor_E_IC"
+  if (ncol(listData$Y_IC) > 2) { # TODO: add "of species i-j"
+    rownames(outTmb$vcov_E_IC)[idx] <- paste(
+      rownames(outTmb$vcov_E_IC)[idx],
+      1:length(idx)
+    )
+  }
+
+  idx <- which(rownames(outTmb$sry_sdr) == "BV_f")
+  stopifnot(length(idx) == nrow(listData$K) * 2)
+  idx_DBV <- 1:nrow(listData$K)
+  outTmb$DBV_f <- outTmb$sry_sdr[idx[idx_DBV], ]
+  rownames(outTmb$DBV_f) <- colnames(listData$Z_DS_f)[idx_DBV]
+  idx_SBV <- (nrow(listData$K) + 1):(2 * nrow(listData$K))
+  outTmb$SBV_IC_f <- outTmb$sry_sdr[idx[idx_SBV], ]
+  rownames(outTmb$SBV_IC_f) <- colnames(listData$Z_DS_f)[idx_DBV]
+
+  idx <- which(rownames(outTmb$sry_sdr) == "BV_IC_f")
+  stopifnot(length(idx) == nrow(listData$K))
+  outTmb$BV_IC_f <- outTmb$sry_sdr[idx, ]
+  rownames(outTmb$BV_IC_f) <- rownames(outTmb$DBV_f)
+
   if (nrow(listData$Z_DxS_f) <= 2) {
     outTmb$report$DBVxSBV <- NULL
     outTmb$report$log_sd_DxS <- NULL
@@ -220,15 +273,60 @@ fitDBVSBVinter_prepOut <- function(outTmb, listData, sep = "_") {
   } else if (length(listData$y_SC_f) > 1 & length(listData$y_SC_t) == 1) { # IC and SC_f
     outTmb$report$beta_SC_t <- NULL
     outTmb$report$var_err_SC_t <- NULL
-    names(outTmb$report$BV_SC_f) <- colnames(listData$Z_D_f)
   } else if (length(listData$y_SC_f) == 1 & length(listData$y_SC_t) > 1) { # IC and SC_t
     outTmb$report$beta_SC_f <- NULL
     outTmb$report$var_SIGV_f <- NULL
     outTmb$report$var_err_SC_f <- NULL
     outTmb$report$BV_SC_f <- NULL
-  } else if (length(listData$y_SC_f) > 1 & length(listData$y_SC_t) > 1) { # IC, SC_f and SC_t
-    names(outTmb$report$BV_SC_f) <- colnames(listData$Z_D_f)
   }
+
+  idx <- which(rownames(outTmb$sry_sdr) == "beta_SC_f")
+  if (length(idx) > 0) {
+    stopifnot(length(idx) == ncol(listData$X_SC_f))
+    outTmb$beta_SC_f <- outTmb$sry_sdr[idx, ]
+    rownames(outTmb$beta_SC_f) <- paste(
+      rownames(outTmb$beta_SC_f),
+      colnames(listData$X_SC_f)
+    )
+  }
+  idx <- which(rownames(outTmb$sry_sdr) == "var_SIGV_f")
+  if (length(idx) > 0) {
+    stopifnot(length(idx) == 1)
+    outTmb$var_SIGV_f <- outTmb$sry_sdr[idx, , drop = FALSE]
+  }
+  idx <- which(rownames(outTmb$sry_sdr) == "SIGV_f")
+  if (length(idx) > 0) {
+    stopifnot(length(idx) == ncol(listData$Z_D_f))
+    outTmb$SIGV_f <- outTmb$sry_sdr[idx, ]
+    rownames(outTmb$SIGV_f) <- colnames(listData$Z_D_f)
+  }
+  idx <- which(rownames(outTmb$sry_sdr) == "BV_SC_f")
+  if (length(idx) > 0) {
+    stopifnot(length(idx) == ncol(listData$Z_D_f))
+    outTmb$BV_SC_f <- outTmb$sry_sdr[idx, ]
+    rownames(outTmb$BV_SC_f) <- colnames(listData$Z_D_f)
+  }
+  idx <- which(rownames(outTmb$sry_sdr) == "var_err_SC_f")
+  if (length(idx) > 0) {
+    stopifnot(length(idx) == 1)
+    outTmb$var_err_SC_f <- outTmb$sry_sdr[idx, , drop = FALSE]
+  }
+
+  idx <- which(rownames(outTmb$sry_sdr) == "beta_SC_t")
+  if (length(idx) > 0) {
+    stopifnot(length(idx) == ncol(listData$X_SC_t))
+    outTmb$beta_SC_t <- outTmb$sry_sdr[idx, ]
+    rownames(outTmb$beta_SC_t) <- paste(
+      rownames(outTmb$beta_SC_t),
+      colnames(listData$X_SC_t)
+    )
+  }
+  idx <- which(rownames(outTmb$sry_sdr) == "var_err_SC_t")
+  if (length(idx) > 0) {
+    stopifnot(length(idx) == 1)
+    outTmb$var_err_SC_t <- outTmb$sry_sdr[idx, , drop = FALSE]
+  }
+
   return(outTmb)
 }
 
@@ -262,9 +360,9 @@ fitDBVSBVinter_AIC <- function(outTmb, listData) {
 ##' Fit DBV-SBV models for interspecific mixtures
 ##'
 ##' Fits DBV-SBV models for interspecific mixtures.
-##' @param listY named list of response variables (a matrix Y_IC and, optionally, a vector y_SC_f and a vector y_SC_t)
+##' @param listY named list of response variables (a two-column matrix Y_IC, with the first column for the focal species and the second column for the tester species in the case of a tester-based design, and, optionally, a vector y_SC_f and a vector y_SC_t)
 ##' @param listX named list of design matrices for the fixed-effect explanatory factors (a matrix X_IC and, optionally, a matrix X_SC_f and a matrix X_SC_t)
-##' @param listZ named list of design matrices of random-effect explanatory factors
+##' @param listZ named list of design matrices of random-effect explanatory factors (a matrix Z_DS_f and, optionally, a matrix Z_D_f)
 ##' @param listVCov named list of square, symmetric matrices used, after re-scaling, as variance-covariance matrices for the random-effect factors; named "K" for the BVs (DBVs and SBVs) and "Kmixpair" for the DBVxSBVs; these matrices must have dimnames (both rows and columns) coherent with the column names of the design matrices in \code{listZ}
 ##' @param REML logical
 ##' @param lOptions named list of options (for experts)
@@ -328,6 +426,7 @@ fitDBVSBVinter <- function(listY, listX, listZ, listVCov, REML = TRUE, lOptions 
     !is.null(dimnames(listVCov$K)),
     all(rownames(listVCov$K) == colnames(listVCov$K)),
     all(colnames(listZ$Z_DS_f) %in% rownames(listVCov$K)),
+    all(colnames(listZ$Z_DS_f) == rep(rownames(listVCov$K), times = 2)),
     is.logical(REML)
   )
   if ("Kmixpair" %in% names(listVCov)) {
@@ -431,7 +530,7 @@ fitDBVSBVinter <- function(listY, listX, listZ, listVCov, REML = TRUE, lOptions 
       print("uncertainty quantification")
     }
     out$sdr <- sdreport(f)
-    out$sry_sdr <- summary(out$sdr)
+    out$sry_sdr <- summary(out$sdr, select = "report", p.value = TRUE)
 
     if (verbose) {
       print("output preparation")

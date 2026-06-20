@@ -8,7 +8,6 @@ opts_knit$set(progress = TRUE, verbose = TRUE)
 
 ## -----------------------------------------------------------------------------
 suppressPackageStartupMessages(library(plantmix))
-suppressPackageStartupMessages(library(emmeans))
 suppressPackageStartupMessages(library(ggplot2))
 
 ## ----time_0, echo=FALSE-------------------------------------------------------
@@ -96,7 +95,7 @@ GRMs_vr_trial$S2 <- diag(nbGenosTrial["S2"]) # diag because modeled as fixed
 dimnames(GRMs_vr_trial$S2) <- list(levGenosTrial$S2, levGenosTrial$S2)
 
 set.seed(12345)
-out <- simulDBVSBVinter(GRMs_vr_trial)
+out <- simulDBVSBVinter(GRMs_vr_trial) # see ?simulDBVSBVinter for more details
 names(out)
 tmp <- list2env(out, envir = environment())
 
@@ -447,7 +446,7 @@ for (REML in c(TRUE, FALSE)) {
   print(paste0("fit model with ", ifelse(REML, "REML", "ML"), "..."))
   st <- system.time(
     fitTmb <- fitDBVSBVinter(listY, listX, listZ, listVCov,
-      lOptions = list(iter.max = 20),
+      lOptions = list(iter.max = 20, quantifUncertain = TRUE),
       REML = REML, verbose = 0
     )
   )
@@ -479,69 +478,69 @@ for (i in seq_along(fitsTmb)) {
 
   print("Check fixed effects:")
   checks <- data.frame(
-    species = rep(c("S1", "S2"), each = nrow(truth$B_IC)),
+    param = rownames(fitTmb$B_IC),
     truth = c(truth$B_IC),
-    estim = c(fitTmb$report$B_IC)
+    fitTmb$B_IC,
+    row.names = NULL,
+    check.names = FALSE
   )
-  checks$nBE <- normBiasError(checks$estim, checks$truth)
+  checks$nBE <- normBiasError(checks$Estimate, checks$truth)
   print(checks)
 
   print("Check (co)variances of random genetic effects:")
   checks <- data.frame(
-    ID = c("var(DBV)_S1", "var(SBV)_S1", "cor(DBVxSBV)_S1"),
+    param = rownames(fitTmb$vcov_BV_f),
     truth = c(
       truth$var_DBV["S1"],
       truth$var_SBV["S1"],
       truth$cor_DBV_SBV["S1"]
     ),
-    estim = c(
-      fitTmb$report$vars_BV_f,
-      fitTmb$report$Cor_BV[1, 2]
-    )
+    fitTmb$vcov_BV_f,
+    row.names = NULL,
+    check.names = FALSE
   )
-  checks$nBE <- normBiasError(checks$estim, checks$truth)
+  checks$nBE <- normBiasError(checks$Estimate, checks$truth)
   print(checks)
 
   print("Check (co)variances of residual errors:")
   checks <- data.frame(
-    ID = c("var(err)_IC_S1", "var(err)_IC_S2", "cor(err)"),
+    param = rownames(fitTmb$vcov_E_IC),
     truth = c(truth$var_err_IC, truth$cor_err_IC),
-    estim = c(fitTmb$report$vars_E_IC, fitTmb$report$Cor_E_IC[1, 2])
+    fitTmb$vcov_E_IC,
+    row.names = NULL,
+    check.names = FALSE
   )
-  checks$nBE <- normBiasError(checks$estim, checks$truth)
+  checks$nBE <- normBiasError(checks$Estimate, checks$truth)
   print(checks)
-
-  print(fitTmb$sry_sdr[grep("^log_sd|^unconstr_cor", rownames(fitTmb$sry_sdr)), ])
-  if (FALSE) {
-    print(paste0(
-      "AIC = ", round(fitTmb$AIC),
-      " (k = ", attr(fitTmb$AIC, "k"), ")"
-    ))
-  }
 
   print("Check random genetic effects of the focal species:")
   checks <- data.frame(
-    type = c(
+    param = c(
       rep(c("DBV", "SBV"), each = nrow(truth$BV$S1)),
       rep("BV_IC", length(truth$BV_IC$S1))
     ),
+    geno = levels(datW_IC$geno_S1),
     truth = c(
       truth$BV$S1[levels(datW_IC$geno_S1), ],
-      truth$BV_IC$S1
+      truth$BV_IC$S1[levels(datW_IC$geno_S1)]
     ),
-    estim = c(
-      fitTmb$sry_sdr[grep("^BV_f$", rownames(fitTmb$sry_sdr)), "Estimate"],
-      fitTmb$report$BV_IC_f[names(truth$BV_IC$S1)]
-    )
+    rbind(
+      fitTmb$DBV_f[levels(datW_IC$geno_S1), ],
+      fitTmb$SBV_IC_f[levels(datW_IC$geno_S1), ],
+      fitTmb$BV_IC_f[levels(datW_IC$geno_S1), ]
+    ),
+    row.names = NULL,
+    check.names = FALSE
   )
-  checks$type <- factor(checks$type,
-                        levels = c("BV_IC", "DBV", "SBV"))
-  checks$nBE <- normBiasError(checks$estim, checks$truth)
-  print(tapply(1:nrow(checks), checks$type, function(idx) {
-    cor(checks$truth[idx], checks$esti[idx])
+  checks$param <- factor(checks$param,
+    levels = c("BV_IC", "DBV", "SBV")
+  )
+  checks$nBE <- normBiasError(checks$Estimate, checks$truth)
+  print(tapply(1:nrow(checks), checks$param, function(idx) {
+    cor(checks$truth[idx], checks$Estimate[idx])
   }))
   p <- ggplot(checks) +
-    aes(x = estim, y = truth) +
+    aes(x = Estimate, y = truth) +
     geom_hline(yintercept = 0, linetype = "dotted") +
     geom_vline(xintercept = 0, linetype = "dotted") +
     geom_abline(slope = 1, intercept = 0, linetype = "dotted") +
@@ -551,7 +550,7 @@ for (i in seq_along(fitsTmb)) {
       subtitle = paste0("REML=", fitTmb$REML)
     ) +
     theme_bw() +
-    facet_wrap(~type)
+    facet_wrap(~param)
   print(p)
 }
 
@@ -657,101 +656,109 @@ for (i in seq_along(fitsTmb)) {
 
   print("Check fixed effects:")
   checks <- data.frame(
-    species = rep(c("S1", "S2"), each = nrow(truth$B_IC)),
+    param = rownames(fitTmb$B_IC),
     truth = c(truth$B_IC),
-    estim = c(fitTmb$report$B_IC)
+    fitTmb$B_IC,
+    row.names = NULL,
+    check.names = FALSE
   )
-  checks$nBE <- normBiasError(checks$estim, checks$truth)
+  checks$nBE <- normBiasError(checks$Estimate, checks$truth)
   print(checks)
   checks <- data.frame(
-    species = "S1",
+    param = rownames(fitTmb$beta_SC_f),
     truth = obsMC$blObsContrs$S1[, "SC"],
-    estim = fitTmb$report$beta_SC_f
+    fitTmb$beta_SC_f,
+    row.names = NULL,
+    check.names = FALSE
   )
-  checks$nBE <- normBiasError(checks$estim, checks$truth)
+  checks$nBE <- normBiasError(checks$Estimate, checks$truth)
   print(checks)
   checks <- data.frame(
-    species = "S2",
+    param = rownames(fitTmb$beta_SC_t),
     truth = c(
       obsMC$blObsContrs$S2[, "SC"],
       obsMC$BVObsContrs$S2[-1, "SC", "DBV"]
     ),
-    estim = fitTmb$report$beta_SC_t
+    fitTmb$beta_SC_t,
+    row.names = NULL,
+    check.names = FALSE
   )
-  checks$nBE <- normBiasError(checks$estim, checks$truth)
+  checks$nBE <- normBiasError(checks$Estimate, checks$truth)
   print(checks)
 
   print("Check (co)variances of random genetic effects:")
   checks <- data.frame(
-    ID = c("var(DBV)", "var(SBV)", "var(SIGV)", "cor(DBVxSBV)"),
+    param = c(
+      rownames(fitTmb$vcov_BV_f),
+      rownames(fitTmb$var_SIGV_f)
+    ),
     truth = c(
       truth$var_DBV["S1"],
       truth$var_SBV["S1"],
-      truth$var_SIGV["S1"],
-      truth$cor_DBV_SBV["S1"]
+      truth$cor_DBV_SBV["S1"],
+      truth$var_SIGV["S1"]
     ),
-    estim = c(
-      fitTmb$report$vars_BV_f,
-      fitTmb$report$var_SIGV_f,
-      fitTmb$report$Cor_BV[1, 2]
-    )
+    rbind(
+      fitTmb$vcov_BV_f,
+      fitTmb$var_SIGV_f
+    ),
+    row.names = NULL,
+    check.names = FALSE
   )
-  checks$nBE <- normBiasError(checks$estim, checks$truth)
+  checks$nBE <- normBiasError(checks$Estimate, checks$truth)
   print(checks)
 
   print("Check (co)variances of residual errors:")
   checks <- data.frame(
-    ID = c(
-      "var(err)_S1", "var(err)_S2", "cor(err)",
-      "var(err)_SC_S1", "var(err)_SC_S2"
+    param = c(
+      rownames(fitTmb$vcov_E_IC),
+      rownames(fitTmb$var_err_SC_f),
+      rownames(fitTmb$var_err_SC_t)
     ),
     truth = c(
       truth$var_err_IC, truth$cor_err_IC,
       truth$var_err_SC
     ),
-    estim = c(
-      fitTmb$report$vars_E_IC, fitTmb$report$Cor_E_IC[1, 2],
-      fitTmb$report$var_err_SC_f, fitTmb$report$var_err_SC_t
-    )
+    rbind(
+      fitTmb$vcov_E_IC,
+      fitTmb$var_err_SC_f,
+      fitTmb$var_err_SC_t
+    ),
+    row.names = NULL,
+    check.names = FALSE
   )
-  checks$nBE <- normBiasError(checks$estim, checks$truth)
+  checks$nBE <- normBiasError(checks$Estimate, checks$truth)
   print(checks)
-
-  print(fitTmb$sry_sdr[grep("^log_sd|^unconstr_cor", rownames(fitTmb$sry_sdr)), ])
-  if (FALSE) {
-    print(paste0(
-      "AIC = ", round(fitTmb$AIC),
-      " (k = ", attr(fitTmb$AIC, "k"), ")"
-    ))
-  }
 
   print("Check random genetic effects of the focal species:")
   checks <- data.frame(
-    type = c(
-      rep(c("DBV", "SBV", "SIGV"), each = nrow(truth$BV$S1)),
-      rep(c("BV_IC", "BV_SC"), each = length(truth$BV_IC$S1))
+    param = rep(c("DBV", "SBV", "BV_IC", "SIGV", "BV_SC"),
+      each = nrow(truth$BV$S1)
     ),
+    geno = levels(datW_IC$geno_S1),
     truth = c(
       truth$BV$S1[levels(datW_IC$geno_S1), ],
+      truth$BV_IC$S1[levels(datW_IC$geno_S1)],
       truth$SIGVs$S1[levels(datW_IC$geno_S1)],
-      truth$BV_IC$S1,
-      truth$BV_SC$S1
+      truth$BV_SC$S1[levels(datW_IC$geno_S1)]
     ),
-    estim = c(
-      fitTmb$sry_sdr[grep("^BV_f$", rownames(fitTmb$sry_sdr)), "Estimate"],
-      fitTmb$sry_sdr[grep("^SIGV_f$", rownames(fitTmb$sry_sdr)), "Estimate"],
-      fitTmb$report$BV_IC_f[names(truth$BV_IC$S1)],
-      fitTmb$report$BV_SC_f[names(truth$BV_SC$S1)]
+    rbind(
+      fitTmb$DBV_f[levels(datW_IC$geno_S1), ],
+      fitTmb$SBV_IC_f[levels(datW_IC$geno_S1), ],
+      fitTmb$BV_IC_f[levels(datW_IC$geno_S1), ],
+      fitTmb$SIGV_f[levels(datW_IC$geno_S1), ],
+      fitTmb$BV_SC_f[levels(datW_IC$geno_S1), ]
     )
   )
-  checks$type <- factor(checks$type,
-                        levels = c("BV_SC", "BV_IC", "DBV", "SBV", "SIGV"))
-  checks$nBE <- normBiasError(checks$estim, checks$truth)
-  print(tapply(1:nrow(checks), checks$type, function(idx) {
-    cor(checks$truth[idx], checks$esti[idx])
+  checks$param <- factor(checks$param,
+    levels = c("BV_SC", "BV_IC", "DBV", "SBV", "SIGV")
+  )
+  checks$nBE <- normBiasError(checks$Estimate, checks$truth)
+  print(tapply(1:nrow(checks), checks$param, function(idx) {
+    cor(checks$truth[idx], checks$Estimate[idx])
   }))
   p <- ggplot(checks) +
-    aes(x = estim, y = truth) +
+    aes(x = Estimate, y = truth) +
     geom_hline(yintercept = 0, linetype = "dotted") +
     geom_vline(xintercept = 0, linetype = "dotted") +
     geom_abline(slope = 1, intercept = 0, linetype = "dotted") +
@@ -761,7 +768,7 @@ for (i in seq_along(fitsTmb)) {
       subtitle = paste0("REML=", fitTmb$REML)
     ) +
     theme_bw() +
-    facet_wrap(~type)
+    facet_wrap(~param)
   print(p)
 }
 

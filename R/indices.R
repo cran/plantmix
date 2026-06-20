@@ -36,7 +36,7 @@ RYP <- function(dat, colIDstand = "ID", colIDfocal = "focal", colProp = "prop",
   )
 
   ## monovarietal cultures
-  isMono <- sapply(dat[[colProp]], function(x){
+  isMono <- sapply(dat[[colProp]], function(x) {
     isTRUE(all.equal(1.0, x))
   })
   stopifnot(

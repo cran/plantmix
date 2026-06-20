@@ -15,11 +15,11 @@ fitDBVSBVinter(
 )
 }
 \arguments{
-\item{listY}{named list of response variables (a matrix Y_IC and, optionally, a vector y_SC_f and a vector y_SC_t)}
+\item{listY}{named list of response variables (a two-column matrix Y_IC, with the first column for the focal species and the second column for the tester species in the case of a tester-based design, and, optionally, a vector y_SC_f and a vector y_SC_t)}
 
 \item{listX}{named list of design matrices for the fixed-effect explanatory factors (a matrix X_IC and, optionally, a matrix X_SC_f and a matrix X_SC_t)}
 
-\item{listZ}{named list of design matrices of random-effect explanatory factors}
+\item{listZ}{named list of design matrices of random-effect explanatory factors (a matrix Z_DS_f and, optionally, a matrix Z_D_f)}
 
 \item{listVCov}{named list of square, symmetric matrices used, after re-scaling, as variance-covariance matrices for the random-effect factors; named "K" for the BVs (DBVs and SBVs) and "Kmixpair" for the DBVxSBVs; these matrices must have dimnames (both rows and columns) coherent with the column names of the design matrices in \code{listZ}}
 

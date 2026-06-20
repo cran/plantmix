@@ -49,8 +49,6 @@ Type DBV_SBV_crop_mix(objective_function<Type>* obj)
   PARAMETER_VECTOR(beta_SC_t);
   PARAMETER(log_sd_e_SC_t);
 
-  int d = Y_IC.cols();
-
   // Importantly, the DBV_f used to model SC data are the same as the ones
   // used to model IC data; they initially are in the input BV_f matrix.
   vector<Type> DBV_f = BV_f.matrix().col(0);
@@ -65,7 +63,7 @@ Type DBV_SBV_crop_mix(objective_function<Type>* obj)
   SEPARABLE_t<VECSCALE_t<UNSTRUCTURED_CORR_t<Type>>, MVNORM_t<Type>> h_BV(f_bv, g_bv);
   nll += h_BV(BV_f);
   // simulate BV_f
-  array<Type> BV_f_sim(BV_f.rows(), BV_f.cols());
+  array<Type> BV_f_sim(BV_f.rows(), 2);
   SIMULATE {
     h_BV.simulate(BV_f_sim);
     // REPORT(BV_f_sim);
@@ -161,7 +159,7 @@ Type DBV_SBV_crop_mix(objective_function<Type>* obj)
   fillSparseMatId(Id_n);
   GMRF_t<Type> g_Y(Id_n);
   SEPARABLE_t<VECSCALE_t<UNSTRUCTURED_CORR_t<Type>>, GMRF_t<Type>> h_Y(f_Y, g_Y);
-  matrix<Type> M(Y_IC.rows(), d);
+  matrix<Type> M(Y_IC.rows(), Y_IC.cols());
   M = X_IC * B_IC + Z_DS_f * BV_f.matrix();
   if(Z_DxS_f.cols() > 2){
     M = M + Z_DxS_f * DBVxSBV.matrix();
@@ -185,47 +183,49 @@ Type DBV_SBV_crop_mix(objective_function<Type>* obj)
     REPORT(Y_IC_sim);
   }
 
-  // reports
+  // reports ("AD" to get std.err)
+  ADREPORT(BV_f);
   vector<Type> BV_IC_f(BV_f.rows());
-  BV_IC_f = BV_f.rowwise().sum(); // BV_IC(i) = DBV(i) + SBV(i)
-  REPORT(BV_IC_f);
+  BV_IC_f = BV_f.col(0) + BV_f.col(1);
+  ADREPORT(BV_IC_f);
 
   vector<Type> vars_BV_f = exp(2 * log_sd_BV_f);
-  REPORT(vars_BV_f);
+  ADREPORT(vars_BV_f);
 
-  matrix<Type> Cor_BV_f(d, d);
-  Cor_BV_f = mvn_u_bv.cov();
-  REPORT(Cor_BV_f);
+  Type cor_BV_f = Type(0.0);
+  cor_BV_f = mvn_u_bv.cov()(0,1);
+  ADREPORT(cor_BV_f);
 
   if(Z_DxS_f.cols() > 2){
-    matrix<Type> Cor_DxS(d, d);
+    matrix<Type> Cor_DxS(2, 2);
     Cor_DxS = mvn_u_DxS.cov();
-    REPORT(Cor_DxS);
+    ADREPORT(Cor_DxS);
   }
 
   vector<Type> vars_E_IC = exp(2 * log_sd_E_IC);
-  REPORT(vars_E_IC);
+  ADREPORT(vars_E_IC);
   
-  matrix<Type> Cor_E_IC(d, d);
+  matrix<Type> Cor_E_IC(Y_IC.cols(), Y_IC.cols());
   Cor_E_IC = mvn_Y.cov();
-  REPORT(Cor_E_IC);
+  ADREPORT(Cor_E_IC);
   
-  REPORT(B_IC);
+  ADREPORT(B_IC);
   if(y_SC_f.size() > 1) {
-    REPORT(beta_SC_f);
+    ADREPORT(beta_SC_f);
     Type var_SIGV_f = exp(2 * log_sd_SIGV_f);
-    REPORT(var_SIGV_f);
+    ADREPORT(var_SIGV_f);
+    ADREPORT(SIGV_f);
     Type var_err_SC_f = exp(2 * log_sd_e_SC_f);
-    REPORT(var_err_SC_f);
+    ADREPORT(var_err_SC_f);
     vector<Type> BV_SC_f(BV_f.rows());
     for (int i = 0; i < BV_SC_f.size(); i++)
       BV_SC_f(i) = BV_f(i,0) + SIGV_f(i);
-    REPORT(BV_SC_f);
+    ADREPORT(BV_SC_f);
   }
   if(y_SC_f.size() > 1) {
-    REPORT(beta_SC_t);
+    ADREPORT(beta_SC_t);
     Type var_err_SC_t = exp(2 * log_sd_e_SC_t);
-    REPORT(var_err_SC_t);
+    ADREPORT(var_err_SC_t);
   }
 
   return nll;
