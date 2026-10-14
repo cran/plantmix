@@ -36,7 +36,7 @@ estimRYRep(
 data frame with the inference summaries of RY per mixture
 }
 \description{
-Computes the relative yields (RYs) per replicate (e.g., blocks), then fits a linear model correcting for this rep effect, and quantifies the uncertainty around it.
+Computes the relative yield (RY) per replicate (e.g., blocks), then fits a linear model correcting for this rep effect, and quantifies the uncertainty around it.
 }
 \examples{
 (dat <- data.frame(ID=c("geno1", "geno1",

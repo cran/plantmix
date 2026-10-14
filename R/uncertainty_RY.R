@@ -1,8 +1,66 @@
 ## Functions implementing methods to quantify the uncertainty around RY.
 
+RYperRep <- function(data, colY, colIDstand, colIDfocal, colRep, mix2genos) {
+  if (!is.factor(data[[colRep]])) {
+    data[[colRep]] <- factor(data[[colRep]])
+  }
+  repData <- lapply(levels(data[[colRep]]), function(repLev) {
+    subData <- droplevels(data[data[[colRep]] == repLev, ])
+    n <- sum(sapply(mix2genos, length))
+    repRYs <- list()
+    repRYs[[colIDstand]] <- rep(names(mix2genos), sapply(mix2genos, length))
+    repRYs[[colIDfocal]] <- do.call(c, mix2genos)
+    repRYs[[colRep]] <- rep(repLev, n)
+    repRYs$RY <- rep(NA, n)
+    repRYs <- as.data.frame(do.call(cbind, repRYs))
+    repRYs$RY <- as.numeric(repRYs$RY)
+    for (mix in unique(repRYs[[colIDstand]])) {
+      comps <- mix2genos[[mix]]
+      for (focal in comps) {
+        idx <- which(subData[[colIDstand]] == mix &
+          subData[[colIDfocal]] == focal)
+        if (length(idx) == 0) {
+          next
+        }
+        if (length(idx) > 1) {
+          msg <- paste0(
+            length(idx), " data will be averaged for ", mix,
+            " in replicate ", repLev
+          )
+          warning(msg, immediate. = TRUE)
+        }
+        mixY <- mean(subData[idx, colY])
+        idx <- which(subData[[colIDstand]] == focal &
+          subData[[colIDfocal]] == focal)
+        if (length(idx) == 0) {
+          next
+        }
+        if (length(idx) > 1) {
+          msg <- paste0(
+            length(idx), " data will be averaged for ", focal,
+            " in replicate ", repLev
+          )
+          warning(msg, immediate. = TRUE)
+        }
+        monoY <- mean(subData[idx, colY])
+        idx <- which(repRYs[[colIDstand]] == mix &
+          repRYs[[colIDfocal]] == focal)
+        repRYs$RY[idx] <- mixY / monoY
+      }
+    }
+    repRYs
+  })
+  repData <- do.call(rbind, repData)
+  rownames(repData) <- NULL
+  repData[[colIDstand]] <- factor(repData[[colIDstand]])
+  repData[[colIDfocal]] <- factor(repData[[colIDfocal]])
+  repData[[colRep]] <- factor(repData[[colRep]])
+  return(repData)
+}
+
 ##' RY with "rep" effect
 ##'
-##' Computes the relative yields (RYs) per replicate (e.g., blocks), then fits a linear model correcting for this rep effect, and quantifies the uncertainty around it.
+##' Computes the relative yield (RY) per replicate (e.g., blocks), then fits a linear model correcting for this rep effect, and quantifies the uncertainty around it.
 ##' @param data data frame
 ##' @param colY column name specifying the response variable
 ##' @param colIDstand column name specifying the stand identifiers
@@ -50,58 +108,7 @@ estimRYRep <- function(data, colY, colIDstand, colIDfocal, colRep, mix2genos,
   )
 
   ## compute the RY of each mix per replicate (block)
-  if (!is.factor(data[[colRep]])) {
-    data[[colRep]] <- factor(data[[colRep]])
-  }
-  repData <- lapply(levels(data[[colRep]]), function(repLev) {
-    subData <- droplevels(data[data[[colRep]] == repLev, ])
-    n <- sum(sapply(mix2genos, length))
-    repRYs <- list()
-    repRYs[[colIDstand]] <- rep(names(mix2genos), sapply(mix2genos, length))
-    repRYs[[colIDfocal]] <- do.call(c, mix2genos)
-    repRYs[[colRep]] <- rep(repLev, n)
-    repRYs$RY <- rep(NA, n)
-    repRYs <- as.data.frame(do.call(cbind, repRYs))
-    repRYs$RY <- as.numeric(repRYs$RY)
-    for (i in 1:nrow(repRYs)) {
-      mix <- repRYs[[colIDstand]][i]
-      comps <- mix2genos[[mix]]
-      for (focal in comps) {
-        idx <- which(subData[[colIDstand]] == mix &
-          subData[[colIDfocal]] == focal)
-        if (length(idx) == 0) {
-          next
-        }
-        if (length(idx) > 1) {
-          msg <- paste0(
-            length(idx), " data will be averaged for ", mix,
-            " in replicate ", repLev
-          )
-          warning(msg, immediate. = TRUE)
-        }
-        mixY <- mean(subData[idx, colY])
-        idx <- which(subData[[colIDstand]] == focal &
-          subData[[colIDfocal]] == focal)
-        if (length(idx) == 0) {
-          next
-        }
-        if (length(idx) > 1) {
-          msg <- paste0(
-            length(idx), " data will be averaged for ", focal,
-            " in replicate ", repLev
-          )
-          warning(msg, immediate. = TRUE)
-        }
-        monoY <- mean(subData[idx, colY])
-        repRYs$RY[i] <- mixY / monoY
-      }
-    }
-    repRYs
-  })
-  repData <- do.call(rbind, repData)
-  repData[[colIDstand]] <- factor(repData[[colIDstand]])
-  repData[[colIDfocal]] <- factor(repData[[colIDfocal]])
-  repData[[colRep]] <- factor(repData[[colRep]])
+  repData <- RYperRep(data, colY, colIDstand, colIDfocal, colRep, mix2genos)
 
   ## Fit a linear model correcting for the replicate effect
   repData$focal_stand <- paste0(repData[[colIDfocal]], " in ", repData[[colIDstand]])

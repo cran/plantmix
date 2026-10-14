@@ -7,6 +7,7 @@
 ##' @param subplots character vector indicating which object(s) to plot
 ##' @return nothing
 ##' @author Timothee Flutre
+##' @seealso \code{\link{getDesignBinaryVarMix}}, \code{\link{plotDiallel}}
 ##' @examples
 ##' nbGenos <- 25
 ##' levGenos <- sprintf(fmt=paste0("geno%0", floor(log10(nbGenos))+1, "i"),
@@ -49,6 +50,8 @@ getInitGraphVarMix <- function(levGenos, nbMixes) {
 ##' @noRd
 getDiallelVarMix <- function(levGenos, mixtures, fillDiag = 0) {
   stopifnot(ncol(mixtures) >= 2)
+  mixtures[, 1] <- as.character(mixtures[, 1])
+  mixtures[, 2] <- as.character(mixtures[, 2])
   nbGenos <- length(levGenos)
   diallel <- matrix(0,
     nrow = nbGenos, ncol = nbGenos,
@@ -126,10 +129,12 @@ addEdgeBtwLessConnectedNodesVarMix <- function(graph, verbose) {
 ##' @param levGenos character vector with the names of the genotypes
 ##' @param nbMixes number of mixtures
 ##' @param seed seed for the pseudo-random number generator
+##' @param maxIter maximum number of iterations
 ##' @param showPlots logical indicating if plots should be showed
 ##' @param verbose verbosity level
 ##' @return list
 ##' @author Timothee Flutre
+##' @seealso \code{\link{plotDesignVarMix}}
 ##' @examples
 ##' nbGenos <- 25
 ##' levGenos <- sprintf(fmt=paste0("geno%0", floor(log10(nbGenos))+1, "i"),
@@ -137,13 +142,20 @@ addEdgeBtwLessConnectedNodesVarMix <- function(graph, verbose) {
 ##' nbMixes <- 75 # only binary and balanced
 ##' design <- getDesignBinaryVarMix(levGenos, nbMixes, seed=12345)
 ##' plotDesignVarMix(design$graph, levGenos)
+##'
 ##' ggplot(design$entropies) + aes(x=iteration, y=entropy) + geom_point() + geom_line() +
 ##'   geom_hline(yintercept = design$max_ent) + theme_bw()
+##'
+##' mixtures <- getMixtureList(design$combs)
+##' geno2mixes <- getMixturesPerGeno(mixtures)
+##' table(sapply(geno2mixes, length))
 ##' @export
-getDesignBinaryVarMix <- function(levGenos, nbMixes, seed = NULL, showPlots = FALSE, verbose = FALSE) {
+getDesignBinaryVarMix <- function(levGenos, nbMixes, seed = NULL, maxIter = 100,
+                                  showPlots = FALSE, verbose = FALSE) {
   stopifnot(
     is.character(levGenos),
-    nbMixes <= choose(length(levGenos), 2)
+    nbMixes <= choose(length(levGenos), 2),
+    maxIter > 0
   )
 
   out <- list()
@@ -167,21 +179,27 @@ getDesignBinaryVarMix <- function(levGenos, nbMixes, seed = NULL, showPlots = FA
   entropies <- c(entropies, idxS)
 
   i <- 1
-  while (idxS < max_idxS) {
+  while (idxS < max_idxS && i < maxIter) {
     if (verbose) {
       print(paste0("iter ", i, "; entropy = ", idxS))
     }
     g_tmp <- rmvEdgeBtwMostConnectedNodesVarMix(g_curr, verbose)
     g_new <- addEdgeBtwLessConnectedNodesVarMix(g_tmp, verbose)
-    idxS <- getShannonIndexFromGraph(g_new)
+    new_idxS <- getShannonIndexFromGraph(g_new)
+    if (new_idxS >= idxS) {
+      g_curr <- g_new
+      idxS <- new_idxS
+    }
     entropies <- c(entropies, idxS)
     if (showPlots) {
       plotDesignVarMix(g_new, levGenos)
     }
-    g_curr <- g_new
     i <- i + 1
   }
-  stopifnot(all(!which_multiple(g_curr)))
+  stopifnot(
+    all(!which_multiple(g_curr)),
+    ecount(g_curr) == nbMixes
+  )
   out$graph <- g_curr
 
   combs <- convGraph2Combs(g_curr)

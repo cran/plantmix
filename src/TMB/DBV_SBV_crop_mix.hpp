@@ -63,7 +63,7 @@ Type DBV_SBV_crop_mix(objective_function<Type>* obj)
   SEPARABLE_t<VECSCALE_t<UNSTRUCTURED_CORR_t<Type>>, MVNORM_t<Type>> h_BV(f_bv, g_bv);
   nll += h_BV(BV_f);
   // simulate BV_f
-  array<Type> BV_f_sim(BV_f.rows(), 2);
+  tmbutils::array<Type> BV_f_sim(BV_f.rows(), 2);
   SIMULATE {
     h_BV.simulate(BV_f_sim);
     // REPORT(BV_f_sim);
@@ -122,13 +122,13 @@ Type DBV_SBV_crop_mix(objective_function<Type>* obj)
       VECSCALE_t<MVNORM_t<Type>> h_e_SC_t = VECSCALE(mvn_y_SC_t_cor, sd_e_SC_t);
       h_e_SC_t.simulate(e_SC_t_sim);
       y_SC_t_sim  = X_SC_t * beta_SC_t + e_SC_t_sim;
-      REPORT(y_SC_t_sim); 
+      REPORT(y_SC_t_sim);
     }
   }
 
   // contrib of DBVxSBV to the nll
   UNSTRUCTURED_CORR_t<Type> mvn_u_DxS(unconstr_cor_DxS);
-  array<Type> DBVxSBV_sim(DBVxSBV.rows(), DBVxSBV.cols()); // must be in global scope to be accessible
+  tmbutils::array<Type> DBVxSBV_sim(DBVxSBV.rows(), DBVxSBV.cols()); // must be in global scope to be accessible
   if(Z_DxS_f.cols() > 2){
     vector<Type> sd_DxS = exp(log_sd_DxS);
     VECSCALE_t<UNSTRUCTURED_CORR_t<Type> > f_DxS = VECSCALE(mvn_u_DxS, sd_DxS);
@@ -143,7 +143,7 @@ Type DBV_SBV_crop_mix(objective_function<Type>* obj)
     } else if (invKmixpair.cols() > 2){
       GMRF_t<Type> g_DxS(invKmixpair);
       SEPARABLE_t< VECSCALE_t<UNSTRUCTURED_CORR_t<Type> > , GMRF_t<Type> > h_DxS(f_DxS, g_DxS);
-      nll += h_DxS(DBVxSBV); 
+      nll += h_DxS(DBVxSBV);
       SIMULATE {
         h_DxS.simulate(DBVxSBV_sim);
         // REPORT(DBVxSBV_sim);
@@ -167,8 +167,8 @@ Type DBV_SBV_crop_mix(objective_function<Type>* obj)
   nll += h_Y(Y_IC - M.vec());
   // simulate
   matrix<Type> M_sim(Y_IC.rows(), Y_IC.cols());
-  array<Type> E_IC_sim(Y_IC.rows(), Y_IC.cols());
-  array<Type> Y_IC_sim(Y_IC.rows(), Y_IC.cols());
+  tmbutils::array<Type> E_IC_sim(Y_IC.rows(), Y_IC.cols());
+  tmbutils::array<Type> Y_IC_sim(Y_IC.rows(), Y_IC.cols());
   SIMULATE {
     M_sim = X_IC * B_IC + Z_DS_f * BV_f_sim.matrix();
     if(Z_DxS_f.cols() > 2){
@@ -204,11 +204,11 @@ Type DBV_SBV_crop_mix(objective_function<Type>* obj)
 
   vector<Type> vars_E_IC = exp(2 * log_sd_E_IC);
   ADREPORT(vars_E_IC);
-  
+
   matrix<Type> Cor_E_IC(Y_IC.cols(), Y_IC.cols());
   Cor_E_IC = mvn_Y.cov();
   ADREPORT(Cor_E_IC);
-  
+
   ADREPORT(B_IC);
   if(y_SC_f.size() > 1) {
     ADREPORT(beta_SC_f);

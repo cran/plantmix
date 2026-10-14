@@ -16,7 +16,7 @@ matrix with \code{nb_comps} columns
 }
 \description{
 Tranforms a vector of component observations into a matrix with one row per mixture and components in colums.
-Requires all mixtures to have the same number of components, and all the obervationss from the same mixture to be one after the others, in the same order for each mixture.
+Requires all mixtures to have the same number of components, and all the obervations from the same mixture to be one after the others, in the same order for each mixture.
 }
 \examples{
 datL <- data.frame(ID = c("g1+g2", "g1+g2", "g1+g2", "g1+g2"),

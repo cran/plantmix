@@ -142,31 +142,32 @@ getShannonIndex <- function(p) {
 getGenoPropsFromCombs <- function(combs) {
   stopifnot(
     is.list(combs),
-    all(sapply(combs, is.vector))
+    all(sapply(combs, length) == length(combs[[1]]))
   )
-  x <- table(unlist(combs))
+
+  ## to avoid issues with factors:
+  all_elements <- do.call(c, lapply(combs, as.character))
+
+  x <- table(all_elements)
   out <- x / sum(x)
+
   out <- setNames(as.vector(out), names(x))
+
   return(out)
 }
 
 ##' @noRd
-getOptimalProps <- function(levGenos, nbMixes) {
+getOptimalProps <- function(levGenos, nbMixes, mixSize = 2) {
   nbGenos <- length(levGenos)
   out <- rep(NA, nbGenos)
-  nbMixesPerGeno <- nbMixes / nbGenos
-  if (nbMixesPerGeno %% 1 == 0) {
-    out <- rep(nbMixesPerGeno, nbGenos)
-  } else {
-    out <- rep(floor(nbMixes / nbGenos), nbGenos)
-    remainMixes <- nbMixes - sum(out)
-    if (remainMixes <= length(levGenos)) {
-      out[1:remainMixes] <- out[1:remainMixes] + 1
-    } else {
-      out[1] <- out[1] + nbMixes - sum(out)
-    } # TODO: improve this
+  totalSlots <- mixSize * nbMixes
+  nbMixesPerGeno <- floor(totalSlots / nbGenos)
+  out <- rep(nbMixesPerGeno, nbGenos)
+  remainSlots <- totalSlots %% nbGenos
+  if (remainSlots > 0) {
+    out[1:remainSlots] <- out[1:remainSlots] + 1
   }
-  stopifnot(sum(out) == nbMixes)
+  stopifnot(sum(out) == totalSlots)
   names(out) <- levGenos
   out <- out / sum(out)
   return(out)

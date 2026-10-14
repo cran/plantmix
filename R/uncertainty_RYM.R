@@ -1,17 +1,64 @@
 ## Functions implementing methods to quantify the uncertainty around RYM.
 
+RYMperRep <- function(data, colY, colID, colRep, mix2genos) {
+  repData <- lapply(levels(data[[colRep]]), function(repLev) {
+    repRYMs <- data.frame(RYM = rep(NA, length(mix2genos)))
+    repRYMs[[colRep]] <- repLev
+    repRYMs[[colID]] <- names(mix2genos)
+    subData <- droplevels(data[data[[colRep]] == repLev, ])
+    for (i in 1:nrow(repRYMs)) {
+      stand <- repRYMs[[colID]][i]
+      idxMix <- which(subData[[colID]] == stand)
+      if (length(idxMix) == 0) {
+        next
+      }
+      if (length(idxMix) > 1) {
+        msg <- paste0(
+          "stand '", stand, "' is present more than once",
+          " in rep '", repLev, "'"
+        )
+        stop(msg)
+      }
+      respMix <- subData[[colY]][idxMix]
+      propsMonos <- mix2genos[[stand]]
+      respMonos <- rep(NA, length(mix2genos[[stand]]))
+      for (j in seq_along(respMonos)) {
+        mono <- names(mix2genos[[stand]])[j]
+        idxMono <- which(subData[[colID]] == mono)
+        if (length(idxMono) > 1) {
+          msg <- paste0(
+            "stand '", stand, "' is present more than once",
+            " in rep '", repLev, "'"
+          )
+          stop(msg)
+        }
+        respMonos[j] <- subData[[colY]][idxMono]
+      }
+      ## do NOT ignore NA in mean()
+      repRYMs$RYM[i] <- respMix / weighted.mean(respMonos, propsMonos)
+    }
+    repRYMs
+  })
+  repData <- do.call(rbind, repData)
+  rownames(repData) <- NULL
+  repData[[colRep]] <- factor(repData[[colRep]])
+  repData[[colID]] <- factor(repData[[colID]])
+  return(repData)
+}
+
 ##' RYM with "rep" effect
 ##'
-##' Computes the relative yield of mixtures (RYMs) per replicate (e.g., blocks), then fits a linear model correcting for this rep effect, and quantifies the uncertainty around it.
-##' @param data data frame
+##' Computes the relative yield of mixture (RYM) per replicate (e.g., blocks), then fits a linear model correcting for this rep effect, and quantifies the uncertainty around it.
+##' @param data data frame with the response variable (see \code{colY}) for each replicate (see \code{colRep}) of each stand (see \code{colID})
 ##' @param colY column name specifying the response variable
 ##' @param colID column name specifying the stand identifiers
 ##' @param colRep column name specifying the replicate
-##' @param mix2genos named list with one component pe rmixture, each component being a vector of genotype names
+##' @param mix2genos named list with one component per stand identifier, each component being a vector of genotype names (a monovarietal stand hence contains a single identifier); to pass mixing proportions, give a numeric vector whose names are the stand component(s)
 ##' @param conf_level confidence level for the uncertainty intervals
 ##' @param plotDiag if TRUE, diagnostics will be plotted
 ##' @param title title for the diagnostics plots
-##' @return data frame with the inference summaries of RYM per mixture
+##' @param sep separator used to concatenate stand components in the output
+##' @return data frame with the inference summaries of RYM per stand
 ##' @author Timothee Flutre [aut], Arnaud Gauffreteau [ctb]
 ##' @seealso \code{\link{estimRYRep}}
 ##' @examples
@@ -79,7 +126,7 @@
 ##'          col="grey", lty=2, lwd=2)
 ##' @export
 estimRYMRep <- function(data, colY, colID, colRep, mix2genos, conf_level = 0.95,
-                        plotDiag = FALSE, title = "") {
+                        plotDiag = FALSE, title = "", sep = "-") {
   stopifnot(
     requireNamespace("emmeans", quietly = TRUE),
     is.data.frame(data),
@@ -89,41 +136,44 @@ estimRYMRep <- function(data, colY, colID, colRep, mix2genos, conf_level = 0.95,
     conf_level >= 0 & conf_level <= 1,
     is.logical(plotDiag)
   )
+  stopifnot(all(sapply(mix2genos, function(x) {
+    length(class(x)) == 1
+  })))
+  if (is.character(mix2genos[[1]])) {
+    stopifnot(all(sapply(mix2genos, is.character)))
+    ## by default, when mixing props are not given, they are assumed to
+    ## equiprobable
+    mix2genos <- lapply(mix2genos, function(x) {
+      mix_props <- rep(1 / length(x), length(x))
+      setNames(mix_props, x)
+    })
+  }
+  stopifnot(
+    all(sapply(mix2genos, is.numeric)),
+    all(sapply(mix2genos, function(x) {
+      all.equal(sum(x), 1.0)
+    }))
+  )
 
   out <- data.frame(
-    mix = names(mix2genos),
-    comps = sapply(mix2genos, paste0, collapse = "-"),
+    stand = names(mix2genos),
+    comps = sapply(mix2genos, function(x) {
+      paste0(names(x), collapse = sep)
+    }),
+    props = sapply(mix2genos, function(x) {
+      paste0(x, collapse = sep)
+    }),
     size = sapply(mix2genos, length),
     estim = NA,
     se = NA,
     cil = NA,
     ciu = NA,
-    pv = NA
+    pv = NA,
+    stringsAsFactors = TRUE
   )
 
-  ## compute the RYM of each mix per replicate (block)
-  repData <- lapply(levels(data[[colRep]]), function(repLev) {
-    repRYMs <- data.frame(RYM = rep(NA, length(mix2genos)))
-    repRYMs[[colRep]] <- repLev
-    repRYMs[[colID]] <- names(mix2genos)
-    subData <- droplevels(data[data[[colRep]] == repLev, ])
-    for (i in 1:nrow(repRYMs)) {
-      mix <- repRYMs[[colID]][i]
-      idxMix <- which(subData[[colID]] == mix)
-      respMix <- subData[[colY]][idxMix]
-      respPurs <- rep(NA, length(mix2genos[[mix]]))
-      for (j in seq_along(respPurs)) {
-        pur <- mix2genos[[mix]][j]
-        idxPur <- which(subData[[colID]] == pur)
-        respPurs[j] <- subData[[colY]][idxPur]
-      }
-      repRYMs$RYM[i] <- respMix / mean(respPurs) # do NOT ignore NA in mean()
-    }
-    repRYMs
-  })
-  repData <- do.call(rbind, repData)
-  repData[[colRep]] <- factor(repData[[colRep]])
-  repData[[colID]] <- factor(repData[[colID]])
+  ## compute the RYM of each stand per replicate (block)
+  repData <- RYMperRep(data, colY, colID, colRep, mix2genos)
 
   ## Fit a linear model correcting for the replicate effect
   form <- as.formula(paste0("RYM ~ ", colRep, " + ", colID))
@@ -140,19 +190,19 @@ estimRYMRep <- function(data, colY, colID, colRep, mix2genos, conf_level = 0.95,
   fitMM <- emmeans::emmeans(fit, specs = colID, level = conf_level)
   fitTest <- as.data.frame(emmeans::test(fitMM, null = 1)) # H0: "RYM = 1"
   fitMM <- as.data.frame(fitMM)
-  idxFit <- match(out$mix, fitMM[[colID]])
+  idxFit <- match(out$stand, fitMM[[colID]])
   idxOut <- which(!is.na(idxFit))
   idxFit <- idxFit[!is.na(idxFit)]
-  stopifnot(all(as.character(out$mix[idxOut]) == as.character(fitMM[[colID]][idxFit])))
+  stopifnot(all(as.character(out$stand[idxOut]) == as.character(fitMM[[colID]][idxFit])))
   out$estim[idxOut] <- fitMM$emmean[idxFit]
   out$se[idxOut] <- fitMM$SE[idxFit]
   out$cil[idxOut] <- fitMM$lower.CL[idxFit]
   out$ciu[idxOut] <- fitMM$upper.CL[idxFit]
 
-  idxFit <- match(out$mix, fitTest[[colID]])
+  idxFit <- match(out$stand, fitTest[[colID]])
   idxOut <- which(!is.na(idxFit))
   idxFit <- idxFit[!is.na(idxFit)]
-  stopifnot(all(as.character(out$mix[idxOut]) == as.character(fitTest[[colID]][idxFit])))
+  stopifnot(all(as.character(out$stand[idxOut]) == as.character(fitTest[[colID]][idxFit])))
   ## out$estim[idxOut] <- fitTest$emmean[idxFit]
   ## out$se[idxOut] <- fitTest$SE[idxFit]
   out$pv[idxOut] <- fitTest$p.value[idxFit]

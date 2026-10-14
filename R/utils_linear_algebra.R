@@ -133,7 +133,7 @@ invvec <- function(x, n_col, n_row = NULL, sep = NULL) {
 ##' Inverse vec for mixtures
 ##'
 ##' Tranforms a vector of component observations into a matrix with one row per mixture and components in colums.
-##' Requires all mixtures to have the same number of components, and all the obervationss from the same mixture to be one after the others, in the same order for each mixture.
+##' Requires all mixtures to have the same number of components, and all the obervations from the same mixture to be one after the others, in the same order for each mixture.
 ##' @param x vector; make sure that it is correctly sorted beforehand
 ##' @param nb_comps number of components in each mixture
 ##' @return matrix with \code{nb_comps} columns

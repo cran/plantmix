@@ -7,15 +7,17 @@
 LER(x)
 }
 \arguments{
-\item{x}{data frame with species in rows (with species names as row names) and at least two columns, the first being the performance under sole-cropping and the second under inter-cropping}
+\item{x}{data frame with species in rows (with species names as row names) and at least two columns, the first being the performance under sole-cropping and the second under inter-cropping; missing values are forbidden}
 }
 \value{
 list with partial and total LERs
 }
 \description{
-Computes the land equivalent ratio (LER) of Willey and Osiru (1972, \doi{10.1017/S0021859600025909}) interpreted as the relative land area required under sole cropping to produce the same yield as under intercropping.
+Computes the "land equivalent ratio" (LER) of Willey and Osiru (1972, \doi{10.1017/S0021859600025909}) interpreted as the relative land area required under sole cropping to produce the same yield as under intercropping.
+It is also known as the "relative yield total" (RYT).
+}
+\details{
 It corresponds to equation 28 in Weigelt and Jolliffe (2003, \doi{10.1046/j.1365-2745.2003.00805.x}), and is equivalent to the index called "relative yield total" (RYT) corresponding to equation 26 of the same paper.
-Missing values are forbidden.
 }
 \examples{
 (dat <- data.frame(solecrop=c(5, 15),

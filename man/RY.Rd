@@ -20,9 +20,9 @@ RY(
 
 \item{colIDfocal}{column name for the focal identifiers}
 
-\item{colProp}{column name for the proportions}
+\item{colProp}{column name for the proportions; missing values are forbidden}
 
-\item{colY}{column name for the yield values}
+\item{colY}{column name for the yield values; missing values are forbidden}
 
 \item{avgIfReps}{if TRUE, replicates of monovarietals will be averaged; if FALSE, the presence of replicates will return an error}
 }
@@ -30,10 +30,12 @@ RY(
 input data.frame with an extra column named "RY"
 }
 \description{
-Computes the "relative yield" (RY) as defined in Fowler (1982, \doi{10.2307/2259865}) citing \href{https://research.wur.nl/en/publications/on-competition/}{de Wit (1960)}: RY_ij = Y_ij / Y_i where Y_ij is the yield of i when mixed with j and Y_i is the yield of i in monovarietal culture.
-Note that equation 1 of table 2 in Williams and McCarthy (2001, \doi{10.1046/j.1440-1703.2001.00368.x}) is called "RY" but in fact it corresponds to "RYP" (relative yield per plant).
-Note also that the equation for "RY" in Reiss and Drinkwater (2018, \doi{10.1002/eap.1629}) in fact corresponds to "RYM" (relative yield of mixture).
-Missing values are forbidden.
+Computes the "relative yield" (RY), also called "partial LER" (pLER).
+}
+\details{
+The RY was defined in Fowler (1982, \doi{10.2307/2259865}) citing \href{https://research.wur.nl/en/publications/on-competition/}{de Wit (1960)}: RY_ij = Y_ij / Y_i where Y_ij is the yield of i when mixed with j and Y_i is the yield of i in monovarietal culture.
+Note that equation 1 of table 2 in Williams and McCarthy (2001, \doi{10.1046/j.1440-1703.2001.00368.x}) is called "RY" but in fact it corresponds to the "RYP" (relative yield per plant).
+Note also that the equation for "RY" in Reiss and Drinkwater (2018, \doi{10.1002/eap.1629}) in fact corresponds to the "RYM" (relative yield of mixture).
 }
 \examples{
 (dat <- data.frame(ID=c("geno1", "geno2", "mixg1g2", "mixg1g2"),

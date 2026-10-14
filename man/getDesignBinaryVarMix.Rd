@@ -8,6 +8,7 @@ getDesignBinaryVarMix(
   levGenos,
   nbMixes,
   seed = NULL,
+  maxIter = 100,
   showPlots = FALSE,
   verbose = FALSE
 )
@@ -18,6 +19,8 @@ getDesignBinaryVarMix(
 \item{nbMixes}{number of mixtures}
 
 \item{seed}{seed for the pseudo-random number generator}
+
+\item{maxIter}{maximum number of iterations}
 
 \item{showPlots}{logical indicating if plots should be showed}
 
@@ -36,8 +39,16 @@ levGenos <- sprintf(fmt=paste0("geno\%0", floor(log10(nbGenos))+1, "i"),
 nbMixes <- 75 # only binary and balanced
 design <- getDesignBinaryVarMix(levGenos, nbMixes, seed=12345)
 plotDesignVarMix(design$graph, levGenos)
+
 ggplot(design$entropies) + aes(x=iteration, y=entropy) + geom_point() + geom_line() +
   geom_hline(yintercept = design$max_ent) + theme_bw()
+
+mixtures <- getMixtureList(design$combs)
+geno2mixes <- getMixturesPerGeno(mixtures)
+table(sapply(geno2mixes, length))
+}
+\seealso{
+\code{\link{plotDesignVarMix}}
 }
 \author{
 Timothee Flutre

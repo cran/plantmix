@@ -96,7 +96,7 @@ void invvecMixes(const vector<Type>& x,
 template<class Type>
 void invvecMixes(const vector<Type>& x,
                  const int& nb_comps,
-                 array<Type>& arr)
+                 tmbutils::array<Type>& arr)
 {
   int n = x.size();
   int nrow = (int) n / nb_comps;

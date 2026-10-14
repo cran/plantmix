@@ -23,7 +23,7 @@ RYM(
 
 \item{colProps}{column name for the stand proportions (separated by \code{sep} and summing to 1); if NULL, the code will assume all components of a given mixture are equiprobable}
 
-\item{colY}{column name for the yield values}
+\item{colY}{column name for the yield values; missing values are forbidden}
 
 \item{sep}{separator}
 
@@ -34,10 +34,12 @@ input data.frame with an extra column named from \code{"colOut"}
 }
 \description{
 Computes the "relative yield of mixture" (RYM) as defined initially by Wilson (1988, \doi{10.2307/2403626}) for binary mixtures sowed in equal proportions, and extended by Williams and McCarthy (2001, \doi{10.1046/j.1440-1703.2001.00368.x}) to binary mixtures of unequal proportions.
+}
+\details{
 A RYM above 1 means that the mixture yielded better than the sum of the pure-stand yields, each weighted by their proportion in the mixture.
 It corresponds to equation 35 in Weigelt and Jolliffe (2003, \doi{10.1046/j.1365-2745.2003.00805.x}), as well as equation 25b (and not to 25a!) of the same paper where the "control" treatment is the expected mixture yield calculated based on the weighted component monovarietal yields.
+
 Note that the RYM was unfortunately called "relative yield" (RY) by Reiss and Drinkwater (2018, \doi{10.1002/eap.1629}).
-Missing values are forbidden.
 }
 \examples{
 (dat <- data.frame(ID=c("geno1", "geno2", "mixg1g2"),

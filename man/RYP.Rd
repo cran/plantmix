@@ -6,37 +6,91 @@
 \usage{
 RYP(
   dat,
+  mix2monoGenos,
   colIDstand = "ID",
   colIDfocal = "focal",
-  colProp = "prop",
+  colDens = "density",
   colY = "yield"
 )
 }
 \arguments{
-\item{dat}{data.frame with one yield value per row and with at least four columns: the identifier of each stand, the identifier of the focal genotype or species in each stand, the sowing (plant) proportion of the focal in each stand, and the focal yield in each stand (see the example below); a stand with a single proportion equals to 1 will be interpreted as a monovarietal culture ("pure stand"), a mixture otherwise (and its proportions should sum to 1); note that contrary to \code{\link{RY}}, the proportions will be used to compute the values of RYP}
+\item{dat}{data.frame with one yield value per row and with at least four columns: the identifier of each stand, the identifier of the focal genotype or species in each stand, the sowing (plant) density of the focal in each stand, and the focal yield in each stand (see the example below)}
+
+\item{mix2monoGenos}{named list of named character vectors, with mixture identifiers in names (as in \code{colIDstand}); each component is a named character vector whose names are in \code{colIDfocal} and values are in \code{colIDstand}; these names and values should be different if a given genotype is present in monovarietal at several densities}
 
 \item{colIDstand}{column name for the stand identifiers}
 
-\item{colIDfocal}{column name for the focal identifiers}
+\item{colIDfocal}{column name for the identifiers of the focal genotypes}
 
-\item{colProp}{column name for the proportions}
+\item{colDens}{column name for the densities; missing values are forbidden}
 
-\item{colY}{column name for the yield values}
+\item{colY}{column name for the yield values; will be averaged for modalities present several times; missing values are forbidden}
 }
 \value{
 input data.frame with an extra column named "RYP"
 }
 \description{
-Computes the relative yield per plant (RYP) as defined in Fowler (1982, \doi{10.2307/2259865}): RYP_ij = Y_ij / (p Y_i) where Y_ij is the yield of i when mixed with j at a proportion of p, and Y_i is the yield of i in monovarietal culture.
-Note that, unfortunately, the equation of RYP was called "relative yield" (RY) in table 2 of Williams and McCarthy (2001, \doi{10.1046/j.1440-1703.2001.00368.x}), although these authors do have the right equation, i.e., they only dropped the "per plant".
-Missing values are forbidden.
+Computes the "relative yield per plant" (RYP), also called "density-corrected partial LER" (pLER_dc).
+}
+\details{
+The RYP was initially defined in Fowler (1982, \doi{10.2307/2259865}) so that the total density of all plants was held constant and only the proportions of the different components (species or genotypes) differed: RYP_ij = Y_ij / (p Y_i) where Y_ij is the yield of i when mixed with j at a proportion of p, and Y_i is the yield of i in monovarietal culture.
+Moreover, note that, unfortunately, the equation of RYP was called "relative yield" (RY) in table 2 of Williams and McCarthy (2001, \doi{10.1046/j.1440-1703.2001.00368.x}), although these authors do have the right equation, i.e., they only dropped the "per plant" in the index name.
+
+This function extends Fowler's definition to the case where the total plant density is different between stand types, equivalent to the density-corrected partial LER in De Freitas et al (2026, \doi{10.1016/j.fcr.2026.110468}) defined as: RYP_ij = (Y_ij / d_ij) / (Y_i / d_i) where Y_ij is the yield of i when mixed with j at a density of d_ij, and Y_i is the yield of i in monovarietal culture at a density of d_i.
 }
 \examples{
+## example of a binary varietal mixture:
 (dat <- data.frame(ID=c("geno1", "geno2", "mixg1g2", "mixg1g2"),
                    focal=c("geno1", "geno2", "geno1", "geno2"),
-                   prop=c(1, 1, 0.5, 0.5),
-                   yield=c(50, 40, 25, 22)))
-RYP(dat)
+                   density=c(300, 300, 150, 150),
+                   yield=c(70, 90, 40, 40)))
+mix2monoGenos <- list("mixg1g2" = c("geno1" = "geno1",
+                                    "geno2" = "geno2"))
+RYP(dat, mix2monoGenos)
+
+## example of a binary crop mixture with a singe density per modality:
+dat <- data.frame(
+  ID = c("SCW", "SCP", "ICWP", "ICWP"),
+  focal = c("wheat1", "pea1", "wheat1", "pea1"),
+  density = c(300, 40, 150, 40),
+  yield = c(35, 22, 20, 22),
+  stringsAsFactors = TRUE
+)
+mix2monoGenos <- list("ICWP" = c("pea1" = "SCP",
+                                 "wheat1" = "SCW"))
+RYP(dat, mix2monoGenos)
+
+## example of a binary crop mixture with several densities per modality:
+## 1) use SCW30 as the reference for the monovarietal wheat:
+dat <- data.frame(
+  ID = c("SCW30", "SCW15", "SCP",
+         "ICW15P", "ICW15P"),
+  focal = c("wheat1", "wheat1", "pea1",
+            "wheat1", "pea1"),
+  density = c(300, 150, 40,
+              150, 40),
+  yield = c(35, 33, 22,
+            20, 22),
+  stringsAsFactors = TRUE
+)
+mix2monoGenos <- list("ICW15P" = c("wheat1" = "SCW30",
+                                   "pea1" = "SCP"))
+RYP(dat, mix2monoGenos)
+## 2) use SCW15 as the reference for the monovarietal wheat:
+dat <- data.frame(
+  ID = c("SCW30", "SCW15", "SCP",
+         "ICW15P", "ICW15P"),
+  focal = c("wheat1", "wheat1", "pea1",
+            "wheat1", "pea1"),
+  density = c(300, 150, 40,
+              150, 40),
+  yield = c(35, 33, 22,
+            20, 22),
+  stringsAsFactors = TRUE
+)
+mix2monoGenos <- list("ICW15P" = c("wheat1" = "SCW15",
+                                   "pea1" = "SCP"))
+RYP(dat, mix2monoGenos)
 }
 \seealso{
 \code{\link{RY}}, \code{\link{RYT}}, \code{\link{RYM}}

@@ -7,6 +7,7 @@
 ##' @param main main title for the graph plot
 ##' @return nothing
 ##' @author Timothee Flutre
+##' @seealso \code{\link{getDesignBinaryCropMix}}, \code{\link{plotDiallel}}
 ##' @examples
 ##' nbGenos1 <- 30
 ##' levGenos1 <- sprintf(fmt=paste0("S1_%0", floor(log10(nbGenos1))+1, "i"),
@@ -53,6 +54,8 @@ getInitGraphCropMix <- function(levGenos1, levGenos2, nbMixes) {
 ##' @noRd
 getDiallelCropMix <- function(levGenos1, levGenos2, mixtures) {
   stopifnot(ncol(mixtures) >= 2)
+  mixtures[, 1] <- as.character(mixtures[, 1])
+  mixtures[, 2] <- as.character(mixtures[, 2])
   nbGenos1 <- length(levGenos1)
   nbGenos2 <- length(levGenos2)
   diallel <- matrix(0,
@@ -153,10 +156,12 @@ addEdgeBtwLessConnectedNodesCropMix <- function(graph, max_idxS, verbose) {
 ##' @param levGenos2 character vector with the names of the genotypes of the second species
 ##' @param nbMixes number of mixtures
 ##' @param seed seed for the pseudo-random number generator
+##' @param maxIter maximum number of iterations
 ##' @param showPlots logical indicating if plots should be showed
 ##' @param verbose verbosity level
 ##' @return list
 ##' @author Timothee Flutre
+##' @seealso \code{\link{plotDesignCropMix}}
 ##' @examples
 ##' nbGenos1 <- 30
 ##' levGenos1 <- sprintf(fmt=paste0("S1_%0", floor(log10(nbGenos1))+1, "i"),
@@ -170,13 +175,14 @@ addEdgeBtwLessConnectedNodesCropMix <- function(graph, max_idxS, verbose) {
 ##' ggplot(design$entropies) + aes(x=iteration, y=entropy, group=type) + geom_point() + geom_line() +
 ##'   geom_hline(yintercept = design$max_ent) + theme_bw() + facet_wrap(~ type)
 ##' @export
-getDesignBinaryCropMix <- function(levGenos1, levGenos2, nbMixes, seed = NULL,
+getDesignBinaryCropMix <- function(levGenos1, levGenos2, nbMixes, seed = NULL, maxIter = 100,
                                    showPlots = FALSE, verbose = FALSE) {
   stopifnot(
     is.character(levGenos1),
     is.character(levGenos2),
     length(levGenos1) >= length(levGenos2),
-    nbMixes <= length(levGenos1) * length(levGenos2)
+    nbMixes <= length(levGenos1) * length(levGenos2),
+    maxIter > 0
   )
 
   out <- list()
@@ -203,7 +209,7 @@ getDesignBinaryCropMix <- function(levGenos1, levGenos2, nbMixes, seed = NULL,
   entropies <- rbind(entropies, idxS)
 
   i <- 1
-  while (all(idxS[1] < max_idxS[1] | idxS[2] < max_idxS[2])) {
+  while (all(idxS[1] < max_idxS[1] | idxS[2] < max_idxS[2]) & i < maxIter) {
     if (verbose) {
       print(paste0(
         "iter ", i, "; entropy1 = ", idxS[1],
@@ -212,12 +218,15 @@ getDesignBinaryCropMix <- function(levGenos1, levGenos2, nbMixes, seed = NULL,
     }
     g_tmp <- rmvEdgeBtwMostConnectedNodesCropMix(g_curr, verbose)
     g_new <- addEdgeBtwLessConnectedNodesCropMix(g_tmp, max_idxS, verbose)
-    idxS <- getShannonIndexFromGraph(g_new)
+    new_idxS <- getShannonIndexFromGraph(g_new)
+    if (new_idxS[1] >= idxS[1] | new_idxS[2] >= idxS[2]) {
+      g_curr <- g_new
+      idxS <- new_idxS
+    }
     entropies <- rbind(entropies, idxS)
     if (showPlots) {
       plotDesignCropMix(g_new, levGenos1, levGenos2)
     }
-    g_curr <- g_new
     i <- i + 1
   }
   stopifnot(all(!which_multiple(g_curr)))

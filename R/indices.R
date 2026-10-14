@@ -2,94 +2,187 @@
 
 ##' Relative yield per plant (RYP)
 ##'
-##' Computes the relative yield per plant (RYP) as defined in Fowler (1982, \doi{10.2307/2259865}): RYP_ij = Y_ij / (p Y_i) where Y_ij is the yield of i when mixed with j at a proportion of p, and Y_i is the yield of i in monovarietal culture.
-##' Note that, unfortunately, the equation of RYP was called "relative yield" (RY) in table 2 of Williams and McCarthy (2001, \doi{10.1046/j.1440-1703.2001.00368.x}), although these authors do have the right equation, i.e., they only dropped the "per plant".
-##' Missing values are forbidden.
-##' @param dat data.frame with one yield value per row and with at least four columns: the identifier of each stand, the identifier of the focal genotype or species in each stand, the sowing (plant) proportion of the focal in each stand, and the focal yield in each stand (see the example below); a stand with a single proportion equals to 1 will be interpreted as a monovarietal culture ("pure stand"), a mixture otherwise (and its proportions should sum to 1); note that contrary to \code{\link{RY}}, the proportions will be used to compute the values of RYP
+##' Computes the "relative yield per plant" (RYP), also called "density-corrected partial LER" (pLER_dc).
+##'
+##' The RYP was initially defined in Fowler (1982, \doi{10.2307/2259865}) so that the total density of all plants was held constant and only the proportions of the different components (species or genotypes) differed: RYP_ij = Y_ij / (p Y_i) where Y_ij is the yield of i when mixed with j at a proportion of p, and Y_i is the yield of i in monovarietal culture.
+##' Moreover, note that, unfortunately, the equation of RYP was called "relative yield" (RY) in table 2 of Williams and McCarthy (2001, \doi{10.1046/j.1440-1703.2001.00368.x}), although these authors do have the right equation, i.e., they only dropped the "per plant" in the index name.
+##'
+##' This function extends Fowler's definition to the case where the total plant density is different between stand types, equivalent to the density-corrected partial LER in De Freitas et al (2026, \doi{10.1016/j.fcr.2026.110468}) defined as: RYP_ij = (Y_ij / d_ij) / (Y_i / d_i) where Y_ij is the yield of i when mixed with j at a density of d_ij, and Y_i is the yield of i in monovarietal culture at a density of d_i.
+##' @param dat data.frame with one yield value per row and with at least four columns: the identifier of each stand, the identifier of the focal genotype or species in each stand, the sowing (plant) density of the focal in each stand, and the focal yield in each stand (see the example below)
+##' @param mix2monoGenos named list of named character vectors, with mixture identifiers in names (as in \code{colIDstand}); each component is a named character vector whose names are in \code{colIDfocal} and values are in \code{colIDstand}; these names and values should be different if a given genotype is present in monovarietal at several densities
 ##' @param colIDstand column name for the stand identifiers
-##' @param colIDfocal column name for the focal identifiers
-##' @param colProp column name for the proportions
-##' @param colY column name for the yield values
+##' @param colIDfocal column name for the identifiers of the focal genotypes
+##' @param colDens column name for the densities; missing values are forbidden
+##' @param colY column name for the yield values; will be averaged for modalities present several times; missing values are forbidden
 ##' @return input data.frame with an extra column named "RYP"
 ##' @author Timothee Flutre
 ##' @seealso \code{\link{RY}}, \code{\link{RYT}}, \code{\link{RYM}}
 ##' @examples
+##' ## example of a binary varietal mixture:
 ##' (dat <- data.frame(ID=c("geno1", "geno2", "mixg1g2", "mixg1g2"),
 ##'                    focal=c("geno1", "geno2", "geno1", "geno2"),
-##'                    prop=c(1, 1, 0.5, 0.5),
-##'                    yield=c(50, 40, 25, 22)))
-##' RYP(dat)
+##'                    density=c(300, 300, 150, 150),
+##'                    yield=c(70, 90, 40, 40)))
+##' mix2monoGenos <- list("mixg1g2" = c("geno1" = "geno1",
+##'                                     "geno2" = "geno2"))
+##' RYP(dat, mix2monoGenos)
+##'
+##' ## example of a binary crop mixture with a singe density per modality:
+##' dat <- data.frame(
+##'   ID = c("SCW", "SCP", "ICWP", "ICWP"),
+##'   focal = c("wheat1", "pea1", "wheat1", "pea1"),
+##'   density = c(300, 40, 150, 40),
+##'   yield = c(35, 22, 20, 22),
+##'   stringsAsFactors = TRUE
+##' )
+##' mix2monoGenos <- list("ICWP" = c("pea1" = "SCP",
+##'                                  "wheat1" = "SCW"))
+##' RYP(dat, mix2monoGenos)
+##'
+##' ## example of a binary crop mixture with several densities per modality:
+##' ## 1) use SCW30 as the reference for the monovarietal wheat:
+##' dat <- data.frame(
+##'   ID = c("SCW30", "SCW15", "SCP",
+##'          "ICW15P", "ICW15P"),
+##'   focal = c("wheat1", "wheat1", "pea1",
+##'             "wheat1", "pea1"),
+##'   density = c(300, 150, 40,
+##'               150, 40),
+##'   yield = c(35, 33, 22,
+##'             20, 22),
+##'   stringsAsFactors = TRUE
+##' )
+##' mix2monoGenos <- list("ICW15P" = c("wheat1" = "SCW30",
+##'                                    "pea1" = "SCP"))
+##' RYP(dat, mix2monoGenos)
+##' ## 2) use SCW15 as the reference for the monovarietal wheat:
+##' dat <- data.frame(
+##'   ID = c("SCW30", "SCW15", "SCP",
+##'          "ICW15P", "ICW15P"),
+##'   focal = c("wheat1", "wheat1", "pea1",
+##'             "wheat1", "pea1"),
+##'   density = c(300, 150, 40,
+##'               150, 40),
+##'   yield = c(35, 33, 22,
+##'             20, 22),
+##'   stringsAsFactors = TRUE
+##' )
+##' mix2monoGenos <- list("ICW15P" = c("wheat1" = "SCW15",
+##'                                    "pea1" = "SCP"))
+##' RYP(dat, mix2monoGenos)
 ##' @export
-RYP <- function(dat, colIDstand = "ID", colIDfocal = "focal", colProp = "prop",
-                colY = "yield") {
+RYP <- function(dat, mix2monoGenos, colIDstand = "ID", colIDfocal = "focal",
+                colDens = "density", colY = "yield") {
   stopifnot(
     is.data.frame(dat),
-    all(c(colIDstand, colIDfocal, colProp, colY) %in% colnames(dat)),
-    is.numeric(dat[[colProp]]),
+    all(c(colIDstand, colIDfocal, colDens, colY) %in% colnames(dat)),
+    is.numeric(dat[[colDens]]),
     is.numeric(dat[[colY]]),
-    all(!is.na(dat[[colProp]])),
-    all(!is.na(dat[[colY]]))
+    all(!is.na(dat[[colDens]])),
+    all(!is.na(dat[[colY]])),
+    !is.null(names(mix2monoGenos)),
+    all(!sapply(mix2monoGenos, anyDuplicated)),
+    all(!is.na(sapply(mix2monoGenos, length))),
+    all(sapply(mix2monoGenos, length) > 1),
+    all(names(mix2monoGenos) %in% as.character(dat[[colIDstand]])),
+    all(unique(do.call(c, mix2monoGenos)) %in% as.character(dat[[colIDstand]])),
+    all(sapply(mix2monoGenos, function(x) {
+      !is.null(names(x))
+    })),
+    all(unique(do.call(c, lapply(mix2monoGenos, names))) %in%
+      as.character(dat[[colIDfocal]]))
   )
 
   out <- data.frame(dat,
     RYP = NA
   )
 
-  ## monovarietal cultures
-  isMono <- sapply(dat[[colProp]], function(x) {
-    isTRUE(all.equal(1.0, x))
-  })
-  stopifnot(
-    sum(isMono) > 0,
-    sum(isMono) < nrow(dat)
-  )
-  out$RYP[which(isMono)] <- 1.0
+  standSizes <- sapply(mix2monoGenos, length)
+  colStandSize <- "standSize"
+  out[[colStandSize]] <- 1
+  idx <- which(out[[colIDstand]] %in% names(mix2monoGenos))
+  out[idx, colStandSize] <- standSizes[as.character(out[idx, colIDstand])]
+
+  ## monovarietals
+  idx <- which(out[[colStandSize]] == 1)
+  out$RYP[idx] <- 1.0
 
   ## mixtures
-  idxMixes <- which(!isMono)
-  mixSumProps <- tapply(
-    dat[[colProp]][idxMixes],
-    as.character(dat[[colIDstand]][idxMixes]),
-    sum
+  mix2mixGenos <- tapply(dat[[colIDfocal]], dat[[colIDstand]], function(x) {
+    unique(as.character(x))
+  })
+  mix2mixGenos <- mix2mixGenos[sapply(mix2mixGenos, length) > 1]
+  stopifnot(
+    sapply(mix2mixGenos, length) == sapply(mix2monoGenos, length),
+    all(sort(names(mix2mixGenos)) == sort(names(mix2monoGenos)))
   )
-  tmp <- Map(function(x) {
-    all.equal(1.0, x)
-  }, mixSumProps)
-  tmp <- unlist(lapply(tmp, function(x) {
-    if (is.logical(x)) {
-      x
-    } else {
-      FALSE
+  mix2mixGenos <- mix2mixGenos[names(mix2monoGenos)]
+  stopifnot(all(do.call(c, lapply(mix2mixGenos, sort)) ==
+    do.call(c, lapply(mix2monoGenos, function(x) {
+      sort(names(x))
+    }))))
+  for (mixID in names(mix2mixGenos)) {
+    for (mixGeno in mix2mixGenos[[mixID]]) {
+      idxMix <- which(as.character(dat[[colIDstand]]) == mixID &
+        as.character(dat[[colIDfocal]]) == mixGeno)
+      mixYield <- dat[[colY]][idxMix]
+      mixDens <- dat[[colDens]][idxMix]
+      stopifnot(
+        length(mixYield) > 0,
+        length(mixDens) > 0
+      )
+      if (length(mixDens) > 1) {
+        if (!length(unique(mixDens)) == 1) {
+          msg <- paste0(
+            "'", mixGeno, "' in mixture '", mixID, "'",
+            " is present at several densities"
+          )
+          stop(msg)
+        }
+        mixYield <- mean(mixYield)
+        mixDens <- mean(mixDens)
+      }
+      monoStand <- mix2monoGenos[[mixID]][mixGeno]
+      idxMono <- which(as.character(out[[colStandSize]]) == 1 &
+        as.character(dat[[colIDstand]]) == monoStand)
+      monoYield <- dat[[colY]][idxMono]
+      monoDens <- dat[[colDens]][idxMono]
+      stopifnot(
+        length(monoYield) > 0,
+        length(monoDens) > 0
+      )
+      if (length(monoDens) > 1) {
+        if (!length(unique(monoDens)) == 1) {
+          msg <- paste0(
+            "'", monoStand, "' in monovarietal",
+            " is present at several densities"
+          )
+          stop(msg)
+        }
+        monoYield <- mean(monoYield)
+        monoDens <- mean(monoDens)
+      }
+      out$RYP[idxMix] <- (mixYield / mixDens) / (monoYield / monoDens) # eq3 of De Freitas et al (2026)
     }
-  }))
-  if (!all(tmp)) {
-    msg <- "not all props are equal to 1"
-    stop(msg)
   }
-  for (i in idxMixes) {
-    mixYield <- dat[[colY]][i]
-    prop <- dat[[colProp]][i]
-    focalID <- as.character(dat[[colIDfocal]][i])
-    idx <- which(dat[[colIDstand]] == focalID)
-    stopifnot(length(idx) == 1)
-    monoYield <- dat[[colY]][idx]
-    out$RYP[i] <- mixYield / (prop * monoYield)
-  }
+
+  out[[colStandSize]] <- NULL
 
   return(out)
 }
 
 ##' Relative yield (RY)
 ##'
-##' Computes the "relative yield" (RY) as defined in Fowler (1982, \doi{10.2307/2259865}) citing \href{https://research.wur.nl/en/publications/on-competition/}{de Wit (1960)}: RY_ij = Y_ij / Y_i where Y_ij is the yield of i when mixed with j and Y_i is the yield of i in monovarietal culture.
-##' Note that equation 1 of table 2 in Williams and McCarthy (2001, \doi{10.1046/j.1440-1703.2001.00368.x}) is called "RY" but in fact it corresponds to "RYP" (relative yield per plant).
-##' Note also that the equation for "RY" in Reiss and Drinkwater (2018, \doi{10.1002/eap.1629}) in fact corresponds to "RYM" (relative yield of mixture).
-##' Missing values are forbidden.
+##' Computes the "relative yield" (RY), also called "partial LER" (pLER).
+##'
+##' The RY was defined in Fowler (1982, \doi{10.2307/2259865}) citing \href{https://research.wur.nl/en/publications/on-competition/}{de Wit (1960)}: RY_ij = Y_ij / Y_i where Y_ij is the yield of i when mixed with j and Y_i is the yield of i in monovarietal culture.
+##' Note that equation 1 of table 2 in Williams and McCarthy (2001, \doi{10.1046/j.1440-1703.2001.00368.x}) is called "RY" but in fact it corresponds to the "RYP" (relative yield per plant).
+##' Note also that the equation for "RY" in Reiss and Drinkwater (2018, \doi{10.1002/eap.1629}) in fact corresponds to the "RYM" (relative yield of mixture).
 ##' @param dat data.frame with one yield value per row and with at least four columns: the identifier of each stand, the identifier of the focal genotype or species in each stand, the sowing (plant) proportion of the focal in each stand, and the focal yield in each stand (see the example below); a stand with a single proportion equals to 1 will be interpreted as a monovarietal culture ("pure stand") and a mixture otherwise; note that contrary to \code{\link{RYP}}, the proportions will not be used for anything else
 ##' @param colIDstand column name for the stand identifiers
 ##' @param colIDfocal column name for the focal identifiers
-##' @param colProp column name for the proportions
-##' @param colY column name for the yield values
+##' @param colProp column name for the proportions; missing values are forbidden
+##' @param colY column name for the yield values; missing values are forbidden
 ##' @param avgIfReps if TRUE, replicates of monovarietals will be averaged; if FALSE, the presence of replicates will return an error
 ##' @return input data.frame with an extra column named "RY"
 ##' @author Timothee Flutre
@@ -152,13 +245,14 @@ RY <- function(dat, colIDstand = "ID", colIDfocal = "focal", colProp = "prop",
 ##' Relative yield total (RYT)
 ##'
 ##' Computes the "relative yield total" (RYT) of a mixture from \href{http://edepot.wur.nl/197683}{de Wit and Den Bergh (1965)} as the sum of all relative yields (RY) of the mixture.
+##' It is also known as the "land equivalent ratio" (LER) from Willey and Osiru (1972, \doi{10.1017/S0021859600025909}).
+##'
 ##' It corresponds to equation 26 (based on 25a and not 25b!) in Weigelt and Jolliffe (2003, \doi{10.1046/j.1365-2745.2003.00805.x}), and is equivalent to the index called "land equivalent ratio" (LER) corresponding to equation 28 of the same paper.
-##' Missing values are forbidden.
-##' @param dat data.frame with one yield value per row and with at least four columns: the identifier of each stand, the identifier of the focal genotype or species in each stand, the sowing (plant) proportion of the focal in each stand, and the focal yield in each stand (see the example below); a stand with a single proportion equals to 1 will be interpreted as a monovarietal culture ("pure stands") and a mixture otherwise; note that contrary to \code{\link{RYP}}, the proportions will not be used for anything else
+##' @param dat data.frame with one yield value per row and with at least four columns: the identifier of each stand, the identifier of the focal genotype or species in each stand, the sowing (plant) proportion of the focal in each stand, and the focal yield in each stand (see the example below); a stand with a single proportion equals to 1 will be interpreted as a monovarietal culture ("pure stands") and a mixture otherwise
 ##' @param colIDstand column name for the stand identifiers
 ##' @param colIDfocal column name for the focal identifiers
-##' @param colProp column name for the proportions
-##' @param colY column name for the yield values
+##' @param colProp column name for the proportions; missing values are forbidden
+##' @param colY column name for the yield values; missing values are forbidden
 ##' @return input data.frame with an extra column named "RYT"
 ##' @seealso \code{\link{RYP}}, \code{\link{RY}}, \code{\link{RYM}}, \code{\link{LER}}
 ##' @examples
@@ -193,15 +287,16 @@ RYT <- function(dat, colIDstand = "ID", colIDfocal = "focal", colProp = "prop",
 ##' Relative yield of mixture (RYM)
 ##'
 ##' Computes the "relative yield of mixture" (RYM) as defined initially by Wilson (1988, \doi{10.2307/2403626}) for binary mixtures sowed in equal proportions, and extended by Williams and McCarthy (2001, \doi{10.1046/j.1440-1703.2001.00368.x}) to binary mixtures of unequal proportions.
+##'
 ##' A RYM above 1 means that the mixture yielded better than the sum of the pure-stand yields, each weighted by their proportion in the mixture.
 ##' It corresponds to equation 35 in Weigelt and Jolliffe (2003, \doi{10.1046/j.1365-2745.2003.00805.x}), as well as equation 25b (and not to 25a!) of the same paper where the "control" treatment is the expected mixture yield calculated based on the weighted component monovarietal yields.
+##'
 ##' Note that the RYM was unfortunately called "relative yield" (RY) by Reiss and Drinkwater (2018, \doi{10.1002/eap.1629}).
-##' Missing values are forbidden.
 ##' @param dat data.frame with one yield value per row and with at least four columns: the identifier of each stand, the identifiers of the components of each stand (separated by a specific symbol in the case of mixtures), the sowing (plant) proportion of the components in each stand (separated by the same symbol in the case of mixtures, and the yield of each stand (see the example below); a stand with a single component should have its proportion equal to 1 and will be interpreted as a monovarietal culture ("pure stand"), a mixture otherwise (and its proportions should sum to 1)
 ##' @param colIDstand column name for the stand identifiers (they should be unique); if NULL, the code will attempt to use \code{"colIDcomps"}
 ##' @param colIDcomps column name for the identifiers of the stand components (separated by \code{sep})
 ##' @param colProps column name for the stand proportions (separated by \code{sep} and summing to 1); if NULL, the code will assume all components of a given mixture are equiprobable
-##' @param colY column name for the yield values
+##' @param colY column name for the yield values; missing values are forbidden
 ##' @param sep separator
 ##' @param colOut column name for the output RYM
 ##' @return input data.frame with an extra column named from \code{"colOut"}
@@ -303,10 +398,11 @@ RYM <- function(dat, colIDstand = NULL, colIDcomps = "comps", colProps = NULL,
 
 ##' Land equivalent ratio (LER)
 ##'
-##' Computes the land equivalent ratio (LER) of Willey and Osiru (1972, \doi{10.1017/S0021859600025909}) interpreted as the relative land area required under sole cropping to produce the same yield as under intercropping.
+##' Computes the "land equivalent ratio" (LER) of Willey and Osiru (1972, \doi{10.1017/S0021859600025909}) interpreted as the relative land area required under sole cropping to produce the same yield as under intercropping.
+##' It is also known as the "relative yield total" (RYT).
+##'
 ##' It corresponds to equation 28 in Weigelt and Jolliffe (2003, \doi{10.1046/j.1365-2745.2003.00805.x}), and is equivalent to the index called "relative yield total" (RYT) corresponding to equation 26 of the same paper.
-##' Missing values are forbidden.
-##' @param x data frame with species in rows (with species names as row names) and at least two columns, the first being the performance under sole-cropping and the second under inter-cropping
+##' @param x data frame with species in rows (with species names as row names) and at least two columns, the first being the performance under sole-cropping and the second under inter-cropping; missing values are forbidden
 ##' @return list with partial and total LERs
 ##' @seealso \code{\link{RYT}}, \code{\link{RY}}
 ##' @author Timothee Flutre

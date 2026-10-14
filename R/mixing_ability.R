@@ -88,11 +88,9 @@ getMixtureList <- function(mixtures, sep = NULL) {
 getMixturesPerGeno <- function(mix2genos) {
   stopifnot(is.list(mix2genos))
   genos <- unique(sort(do.call(c, mix2genos)))
-  mix2genos <- lapply(mix2genos, paste, collapse = ",")
-  vec_mix2genos <- do.call(c, mix2genos)
   out <- Map(function(geno) {
-    idx <- grep(geno, vec_mix2genos)
-    names(mix2genos)[idx]
+    has_geno <- sapply(mix2genos, function(mix) geno %in% mix)
+    names(mix2genos)[has_geno]
   }, genos)
   return(out)
 }

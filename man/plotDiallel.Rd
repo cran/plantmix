@@ -4,15 +4,30 @@
 \alias{plotDiallel}
 \title{Plot diallel}
 \usage{
-plotDiallel(diallel, main = NULL)
+plotDiallel(
+  diallel,
+  main = NULL,
+  colLabs = NULL,
+  fill_values = c(`0` = "white", `1` = "black"),
+  margins = c(t = 10, r = 25, b = 20, l = 40),
+  xlab_angle = 45
+)
 }
 \arguments{
 \item{diallel}{matrix}
 
 \item{main}{title}
+
+\item{colLabs}{optional vector of colors for each label (black otherwise)}
+
+\item{fill_values}{values with which to fill the tiles}
+
+\item{margins}{named numeric vector with margins around the plot (unit with the sizes of the top, right, bottom, and left margins)}
+
+\item{xlab_angle}{rotation angle for the x-axis labels}
 }
 \value{
-nothing
+ggplot object
 }
 \description{
 Plots a diallel matrix.
@@ -24,6 +39,9 @@ levGenos <- sprintf(fmt=paste0("geno\%0", floor(log10(nbGenos))+1, "i"),
 nbMixes <- 75 # only binary and balanced
 design <- getDesignBinaryVarMix(levGenos, nbMixes, seed=12345)
 plotDiallel(design$diallel)
+}
+\seealso{
+\code{\link{getDesignBinaryVarMix}}, \code{\link{plotDesignVarMix}}, \code{\link{plotDesignCropMix}}
 }
 \author{
 Timothee Flutre

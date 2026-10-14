@@ -1,14 +1,14 @@
 #' @import ggplot2
 #' @importFrom graphics axis image pairs par title
 #' @importFrom grDevices grey.colors
-#' @importFrom igraph add_edges as_data_frame degree delete_edges graph_from_adjacency_matrix is_bipartite laplacian_matrix layout_as_bipartite sample_bipartite sample_gnm set_vertex_attr vertex_attr which_multiple
+#' @importFrom igraph add_edges as_data_frame degree delete_edges ecount graph_from_adjacency_matrix is_bipartite laplacian_matrix layout_as_bipartite sample_bipartite sample_gnm set_vertex_attr vertex_attr which_multiple
 #' @import lme4
 #' @importClassesFrom Matrix dgTMatrix
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix diag Diagonal drop0 Matrix rowSums sparseMatrix summary t
 #' @importFrom methods as is
 #' @importFrom Rcpp evalCpp
-#' @importFrom stats as.formula coef contr.sum cor extractAIC fitted formula lm model.matrix pnorm qbeta rnorm nlminb residuals setNames
+#' @importFrom stats as.formula coef contr.sum cor extractAIC fitted formula lm model.matrix pnorm qbeta rnorm nlminb residuals setNames weighted.mean
 #' @import TMB
 #' @importFrom utils capture.output head str strcapture
 #' @rawNamespace useDynLib(plantmix, .registration=TRUE); useDynLib(plantmix_TMBExports)

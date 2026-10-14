@@ -13,23 +13,25 @@ RYT(
 )
 }
 \arguments{
-\item{dat}{data.frame with one yield value per row and with at least four columns: the identifier of each stand, the identifier of the focal genotype or species in each stand, the sowing (plant) proportion of the focal in each stand, and the focal yield in each stand (see the example below); a stand with a single proportion equals to 1 will be interpreted as a monovarietal culture ("pure stands") and a mixture otherwise; note that contrary to \code{\link{RYP}}, the proportions will not be used for anything else}
+\item{dat}{data.frame with one yield value per row and with at least four columns: the identifier of each stand, the identifier of the focal genotype or species in each stand, the sowing (plant) proportion of the focal in each stand, and the focal yield in each stand (see the example below); a stand with a single proportion equals to 1 will be interpreted as a monovarietal culture ("pure stands") and a mixture otherwise}
 
 \item{colIDstand}{column name for the stand identifiers}
 
 \item{colIDfocal}{column name for the focal identifiers}
 
-\item{colProp}{column name for the proportions}
+\item{colProp}{column name for the proportions; missing values are forbidden}
 
-\item{colY}{column name for the yield values}
+\item{colY}{column name for the yield values; missing values are forbidden}
 }
 \value{
 input data.frame with an extra column named "RYT"
 }
 \description{
 Computes the "relative yield total" (RYT) of a mixture from \href{http://edepot.wur.nl/197683}{de Wit and Den Bergh (1965)} as the sum of all relative yields (RY) of the mixture.
+It is also known as the "land equivalent ratio" (LER) from Willey and Osiru (1972, \doi{10.1017/S0021859600025909}).
+}
+\details{
 It corresponds to equation 26 (based on 25a and not 25b!) in Weigelt and Jolliffe (2003, \doi{10.1046/j.1365-2745.2003.00805.x}), and is equivalent to the index called "land equivalent ratio" (LER) corresponding to equation 28 of the same paper.
-Missing values are forbidden.
 }
 \examples{
 (dat <- data.frame(ID=c("geno1", "geno2", "mixg1g2", "mixg1g2"),

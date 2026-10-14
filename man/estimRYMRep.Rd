@@ -12,11 +12,12 @@ estimRYMRep(
   mix2genos,
   conf_level = 0.95,
   plotDiag = FALSE,
-  title = ""
+  title = "",
+  sep = "-"
 )
 }
 \arguments{
-\item{data}{data frame}
+\item{data}{data frame with the response variable (see \code{colY}) for each replicate (see \code{colRep}) of each stand (see \code{colID})}
 
 \item{colY}{column name specifying the response variable}
 
@@ -24,19 +25,21 @@ estimRYMRep(
 
 \item{colRep}{column name specifying the replicate}
 
-\item{mix2genos}{named list with one component pe rmixture, each component being a vector of genotype names}
+\item{mix2genos}{named list with one component per stand identifier, each component being a vector of genotype names (a monovarietal stand hence contains a single identifier); to pass mixing proportions, give a numeric vector whose names are the stand component(s)}
 
 \item{conf_level}{confidence level for the uncertainty intervals}
 
 \item{plotDiag}{if TRUE, diagnostics will be plotted}
 
 \item{title}{title for the diagnostics plots}
+
+\item{sep}{separator used to concatenate stand components in the output}
 }
 \value{
-data frame with the inference summaries of RYM per mixture
+data frame with the inference summaries of RYM per stand
 }
 \description{
-Computes the relative yield of mixtures (RYMs) per replicate (e.g., blocks), then fits a linear model correcting for this rep effect, and quantifies the uncertainty around it.
+Computes the relative yield of mixture (RYM) per replicate (e.g., blocks), then fits a linear model correcting for this rep effect, and quantifies the uncertainty around it.
 }
 \examples{
 ## generate fake data

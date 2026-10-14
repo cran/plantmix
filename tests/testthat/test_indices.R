@@ -1,18 +1,91 @@
 library(plantmix)
 context("indices")
 
-test_that("RYP", {
-  ## example of a binary varietal mixture with unequal proportions:
+test_that("RYP_one-density-per-stand-type", {
+  ## example of a binary species mixture with unequal densities btw SC and IC:
   dat <- data.frame(
-    ID = c("geno1", "geno2", "mixg1g2", "mixg1g2"),
-    focal = c("geno1", "geno2", "geno1", "geno2"),
-    prop = c(1, 1, 0.6, 0.4),
-    yield = c(50, 40, 25, 22)
+    ID = c("SCW", "SCP", "ICWP", "ICWP"),
+    focal = c("wheat1", "pea1", "wheat1", "pea1"),
+    density = c(300, 40, 150, 40),
+    yield = c(35, 22, 20, 22),
+    stringsAsFactors = TRUE
   )
+  mix2monoGenos <- list("ICWP" = c(
+    "pea1" = "SCP",
+    "wheat1" = "SCW"
+  ))
   expected <- data.frame(dat,
-    RYP = c(1, 1, 25 / (0.6 * 50), 22 / (0.4 * 40))
+    RYP = c(1, 1, (20 / 150) / (35 / 300), (22 / 40) / (22 / 40))
   )
-  observed <- RYP(dat)
+  observed <- RYP(dat, mix2monoGenos)
+  expect_equal(observed, expected)
+})
+
+test_that("RYP_several-densities-per-stand-type", {
+  ## example of a binary species mixture with several unequal densities btw SC and IC:
+  ## 1) use SCW30 for ref monovarietal
+  dat <- data.frame(
+    ID = c(
+      "SCW30", "SCW15", "SCP",
+      "ICW15P", "ICW15P"
+    ),
+    focal = c(
+      "wheat1", "wheat1", "pea1",
+      "wheat1", "pea1"
+    ),
+    density = c(
+      300, 150, 40,
+      150, 40
+    ),
+    yield = c(
+      35, 33, 22,
+      20, 22
+    ),
+    stringsAsFactors = TRUE
+  )
+  mix2monoGenos <- list("ICW15P" = c(
+    "wheat1" = "SCW30",
+    "pea1" = "SCP"
+  ))
+  expected <- data.frame(dat,
+    RYP = c(
+      1, 1, 1,
+      (20 / 150) / (35 / 300), (22 / 40) / (22 / 40)
+    )
+  )
+  observed <- RYP(dat, mix2monoGenos)
+  expect_equal(observed, expected)
+  ## 2) use SCW15 for ref monovarietal
+  dat <- data.frame(
+    ID = c(
+      "SCW30", "SCW15", "SCP",
+      "ICW15P", "ICW15P"
+    ),
+    focal = c(
+      "wheat1", "wheat1", "pea1",
+      "wheat1", "pea1"
+    ),
+    density = c(
+      300, 150, 40,
+      150, 40
+    ),
+    yield = c(
+      35, 33, 22,
+      20, 22
+    ),
+    stringsAsFactors = TRUE
+  )
+  mix2monoGenos <- list("ICW15P" = c(
+    "wheat1" = "SCW15",
+    "pea1" = "SCP"
+  ))
+  expected <- data.frame(dat,
+    RYP = c(
+      1, 1, 1,
+      (20 / 150) / (33 / 150), (22 / 40) / (22 / 40)
+    )
+  )
+  observed <- RYP(dat, mix2monoGenos)
   expect_equal(observed, expected)
 })
 

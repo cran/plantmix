@@ -61,6 +61,35 @@ test_that("jaccardBtwCombs", {
   expect_equal(observed, expected)
 })
 
+test_that("getOptimalProps_balanced", {
+  nbGenos <- 10
+  levGenos <- paste0("geno", 1:nbGenos)
+  nbMixes <- 20
+  mixSize <- 2
+  expected <- setNames(
+    rep(4 / 40, nbGenos),
+    levGenos
+  )
+  observed <- getOptimalProps(levGenos, nbMixes, mixSize)
+  expect_equal(observed, expected)
+})
+
+test_that("getOptimalProps_unbalanced", {
+  nbGenos <- 11
+  levGenos <- paste0("geno", 1:nbGenos)
+  nbMixes <- 20
+  mixSize <- 2
+  expected <- setNames(
+    c(
+      rep(4 / 40, 7),
+      rep(3 / 40, 4)
+    ),
+    levGenos
+  )
+  observed <- getOptimalProps(levGenos, nbMixes, mixSize)
+  expect_equal(observed, expected)
+})
+
 test_that("getShannonIndex", {
   p <- c(0.2, 0.8)
   expected <- -(p[1] * log(p[1]) + p[2] * log(p[2]))

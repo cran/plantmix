@@ -70,17 +70,33 @@ makeCompleteDesignInterMixDesign <- function(dat_bl1, levBlocks) {
 }
 
 ##' Make a balanced, incomplete design by sampling a subset of sole crops and intercrops
+##' Only works for two blocks and two pea testers currently.
 ##' @noRd
-allocGenosMixsInterMixDesign <- function(datW, nbBlocks, levGenos) {
+allocGenosMixsInterMixDesign_OLD <- function(datW, nbBlocks, levGenos, seed = NULL) {
+  stopifnot(
+    all(c("geno_S1", "geno_S2", "block") %in% colnames(datW)),
+    nlevels(datW$block) == nbBlocks,
+    nbBlocks == 2,
+    nlevels(datW$geno_S2) == 2
+  )
+
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+
+  levSpecies <- names(levGenos)
+  S1 <- names(levGenos)[1]
+  S2 <- names(levGenos)[2]
   nbGenos <- sapply(levGenos, length)
+  levBlocks <- levels(datW$block)
 
   ## all genos of species 1 obs. as sole crop:
   ## 50% in block A and 50% in block B
-  soleGenosA <- sample(levGenos[["S1"]], nbGenos["S1"] / nbBlocks)
-  soleGenosB <- levGenos[["S1"]][!levGenos[["S1"]] %in% soleGenosA]
+  soleGenosA <- sample(levGenos[[S1]], nbGenos[S1] / nbBlocks)
+  soleGenosB <- levGenos[[S1]][!levGenos[[S1]] %in% soleGenosA]
   stopifnot(
     anyDuplicated(c(soleGenosA, soleGenosB)) == 0,
-    length(c(soleGenosA, soleGenosB)) == nbGenos["S1"]
+    length(c(soleGenosA, soleGenosB)) == nbGenos[S1]
   )
 
   ## 50% obs with tester 1 and 50% obs with tester 2:
@@ -104,34 +120,139 @@ allocGenosMixsInterMixDesign <- function(datW, nbBlocks, levGenos) {
   )
   stopifnot(
     names(table(table(do.call(c, interGenos)))) == 1,
-    length(do.call(c, interGenos)) == nbGenos["S1"]
+    length(do.call(c, interGenos)) == nbGenos[S1]
   )
 
   ## subset the complete design:
   idxSole <- c(
     which(as.character(datW$geno_S1) %in% soleGenosA &
-      is.na(datW$geno_S2) & datW$block == "A"),
+      is.na(datW$geno_S2) & datW$block == levBlocks[1]),
     which(as.character(datW$geno_S1) %in% soleGenosB &
-      is.na(datW$geno_S2) & datW$block == "B")
+      is.na(datW$geno_S2) & datW$block == levBlocks[2])
   )
-  stopifnot(length(idxSole) == nbGenos["S1"])
+  stopifnot(length(idxSole) == nbGenos[S1])
   idxInter <- c(
     which(datW$geno_S1 %in% interGenos$half1A &
-      datW$geno_S2 == levGenos[["S2"]][1] &
-      datW$block == "A"),
+      datW$geno_S2 == levGenos[[S2]][1] &
+      datW$block == levBlocks[1]),
     which(datW$geno_S1 %in% interGenos$half2B &
-      datW$geno_S2 == levGenos[["S2"]][2] &
-      datW$block == "B"),
+      datW$geno_S2 == levGenos[[S2]][2] &
+      datW$block == levBlocks[2]),
     which(datW$geno_S1 %in% interGenos$half1B &
-      datW$geno_S2 == levGenos[["S2"]][1] & datW$block == "B"),
+      datW$geno_S2 == levGenos[[S2]][1] & datW$block == levBlocks[2]),
     which(datW$geno_S1 %in% interGenos$half2A &
-      datW$geno_S2 == levGenos[["S2"]][2] &
-      datW$block == "A")
+      datW$geno_S2 == levGenos[[S2]][2] &
+      datW$block == levBlocks[1])
   )
-  stopifnot(length(idxInter) == nbGenos["S1"])
+  stopifnot(length(idxInter) == nbGenos[S1])
 
   ## keep the sole crop of species 2:
-  idx2 <- which(datW$type2 == "sole_S2")
+  idx2 <- which(is.na(datW$geno_S1) &
+    !is.na(datW$geno_S2))
+
+  datW <- droplevels(datW[c(idxSole, idxInter, idx2), ])
+  rownames(datW) <- NULL
+  return(datW)
+}
+
+##' Make a balanced, incomplete design by sampling a subset of sole crops and intercrops
+##' Only works for two blocks currently, but any number of testers (>1) as long as
+##' the number of focals can be divided by it.
+##' @noRd
+allocGenosMixsInterMixDesign <- function(datW, nbBlocks, levGenos, seed = NULL) {
+  stopifnot(
+    all(c("geno_S1", "geno_S2", "block") %in% colnames(datW)),
+    nlevels(datW$block) == nbBlocks,
+    nbBlocks == 2,
+    nlevels(datW$geno_S2) > 1
+  )
+
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
+
+  levSpecies <- names(levGenos)
+  S1 <- names(levGenos)[1]
+  S2 <- names(levGenos)[2]
+  nbGenos <- sapply(levGenos, length)
+  levBlocks <- levels(datW$block)
+
+  stopifnot(
+    nbGenos[S1] %% nbBlocks == 0,
+    (nbGenos[S1] / nbBlocks) %% nbGenos[S2] == 0
+  )
+
+  ## all genos of species 1 obs. as sole crop:
+  ## 50% in block A and 50% in block B
+  soleGenosA <- sample(levGenos[[S1]], nbGenos[S1] / nbBlocks)
+  soleGenosB <- levGenos[[S1]][!levGenos[[S1]] %in% soleGenosA]
+  stopifnot(
+    anyDuplicated(c(soleGenosA, soleGenosB)) == 0,
+    length(c(soleGenosA, soleGenosB)) == nbGenos[S1]
+  )
+
+  ## intercrops
+  ## each geno of species 2 (tester) obs. with as many genos of species 1
+  ## in block A than in block B
+  nbRepPerTesterA <- length(soleGenosA) / nbGenos[S2]
+  nbRepPerTesterB <- length(soleGenosB) / nbGenos[S2]
+
+  ## allocate testers to genos of S1 already in SC in block A
+  testers_for_A <- rep(levGenos[[S2]], each = nbRepPerTesterA)
+  names(testers_for_A) <- sample(soleGenosA)
+
+  ## allocate testers to genos of S1 already in SC in block B
+  testers_for_B <- rep(levGenos[[S2]], each = nbRepPerTesterB)
+  names(testers_for_B) <- sample(soleGenosB)
+
+  ## allocate intercrops to blocks
+  ## for each tester, allocate its intercrops equitably between blocks
+  idxSole <- integer(0)
+  idxInter <- integer(0)
+  for (i in 1:nbGenos[S2]) {
+    current_tester <- levGenos[[S2]][i]
+
+    ## S1 genos (wheat) associated with this tester (pea) from soleGenosA
+    w_from_A <- names(testers_for_A)[testers_for_A == current_tester]
+    half_w_from_A_1 <- sample(w_from_A, length(w_from_A) / 2)
+    half_w_from_A_2 <- w_from_A[!w_from_A %in% half_w_from_A_1]
+
+    ## S1 genos (wheat) associated with this tester (pea) from soleGenosB
+    w_from_B <- names(testers_for_B)[testers_for_B == current_tester]
+    half_w_from_B_1 <- sample(w_from_B, length(w_from_B) / 2)
+    half_w_from_B_2 <- w_from_B[!w_from_B %in% half_w_from_B_1]
+
+    ## indices for sole crops:
+    idxSole <- c(
+      idxSole,
+      which(datW$geno_S1 %in% w_from_A &
+        is.na(datW$geno_S2) & datW$block == levBlocks[1]),
+      which(datW$geno_S1 %in% w_from_B &
+        is.na(datW$geno_S2) & datW$block == levBlocks[2])
+    )
+
+    # Indices Intercrops (Mélanges) : On croise les blocs pour l'équilibre
+    # Si le sole crop est en A, la moitié de ses mélanges va en A, l'autre en B
+    ## indices for intercrops:
+    idxInter <- c(
+      idxInter,
+      which(datW$geno_S1 %in% half_w_from_A_1 &
+        datW$geno_S2 == current_tester & datW$block == levBlocks[1]),
+      which(datW$geno_S1 %in% half_w_from_A_2 &
+        datW$geno_S2 == current_tester & datW$block == levBlocks[2]),
+      which(datW$geno_S1 %in% half_w_from_B_1 &
+        datW$geno_S2 == current_tester & datW$block == levBlocks[2]),
+      which(datW$geno_S1 %in% half_w_from_B_2 &
+        datW$geno_S2 == current_tester & datW$block == levBlocks[1])
+    )
+  }
+
+  stopifnot(length(idxSole) == nbGenos[S1])
+  stopifnot(length(idxInter) == nbGenos[S1])
+
+  ## keep the sole crop of species 2:
+  idx2 <- which(is.na(datW$geno_S1) &
+    !is.na(datW$geno_S2))
 
   datW <- droplevels(datW[c(idxSole, idxInter, idx2), ])
   rownames(datW) <- NULL
@@ -139,7 +260,8 @@ allocGenosMixsInterMixDesign <- function(datW, nbBlocks, levGenos) {
 }
 
 ##' @noRd
-plotAllocSchemeInterMixDesign <- function(datW, title = "Sparse trial design for both sole crops and intercrops") {
+plotAllocSchemeInterMixDesign <- function(datW,
+                                          title = "Sparse trial design for both sole crops and intercrops") {
   idx <- which(datW$type2 == "sole_S2")
   tmp <- droplevels(datW[-idx, c("geno_S1", "geno_S2", "type2", "block")])
   ## envs for wheat:
@@ -178,11 +300,13 @@ plotAllocSchemeInterMixDesign <- function(datW, title = "Sparse trial design for
       ),
       x = "focal genotypes",
       y = ""
-    ) + # "wheat environments") +
-    theme(
+    ) # "wheat environments")
+  if (length(tmp[["geno_S1"]]) > 10) {
+    p <- p + theme(
       axis.text.x = element_blank(),
       axis.ticks.x = element_blank()
     )
+  }
   return(p)
 }
 
@@ -998,6 +1122,7 @@ simulDBVSBVinter <- function(GRMs,
     all(sapply(GRMs, function(GRM) {
       !is.null(dimnames(GRM))
     })),
+    parsDesign$nbBlocks == 2,
     parsDesign$nbBlocks <= 26
   )
   if (parsDesign$testersS2) {

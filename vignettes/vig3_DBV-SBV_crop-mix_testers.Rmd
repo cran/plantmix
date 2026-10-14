@@ -906,7 +906,8 @@ for (i in seq_along(fitsTmb)) {
 
 See the article for more details:
 
-* Salomon J, Enjalbert J, Flutre T. 2026. Joint modeling of social genetic effects in mono- and pluri-specific groups: case study in intercrops. https://doi.org/10.64898/2026.03.27.714849
+* Salomon J, Enjalbert J, Flutre T. 2026. Joint modeling of social genetic effects in mono- and pluri-specific groups: case study in intercrops. Genetics iyag177. https://doi.org/10.1093/genetics/iyag177
+
 
 
 

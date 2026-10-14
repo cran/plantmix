@@ -32,6 +32,9 @@ nbMixes <- 60 # only binary and balanced
 design <- getDesignBinaryCropMix(levGenos1, levGenos2, nbMixes, seed=12345)
 plotDesignCropMix(design$graph, levGenos1, levGenos2)
 }
+\seealso{
+\code{\link{getDesignBinaryCropMix}}, \code{\link{plotDiallel}}
+}
 \author{
 Timothee Flutre
 }

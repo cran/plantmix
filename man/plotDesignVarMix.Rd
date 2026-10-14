@@ -34,6 +34,9 @@ nbMixes <- 75 # only binary and balanced
 design <- getDesignBinaryVarMix(levGenos, nbMixes, seed=12345)
 plotDesignVarMix(design$graph, levGenos)
 }
+\seealso{
+\code{\link{getDesignBinaryVarMix}}, \code{\link{plotDiallel}}
+}
 \author{
 Timothee Flutre
 }

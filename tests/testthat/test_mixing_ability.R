@@ -193,7 +193,7 @@ test_that("getMixtureList_list_fact", {
   expect_equal(observed, expected)
 })
 
-test_that("getMixturesPerGeno", {
+test_that("getMixturesPerGeno_without-name-clash", {
   mix2genos <- list(
     "mix1" = c("geno1", "geno2"),
     "mix2" = c("geno1", "geno3")
@@ -202,6 +202,20 @@ test_that("getMixturesPerGeno", {
     "geno1" = c("mix1", "mix2"),
     "geno2" = "mix1",
     "geno3" = "mix2"
+  )
+  observed <- getMixturesPerGeno(mix2genos)
+  expect_equal(observed, expected)
+})
+
+test_that("getMixturesPerGeno_with-name-clash", {
+  mix2genos <- list(
+    "mix1" = c("geno1", "geno2"),
+    "mix2" = c("geno1", "geno11")
+  )
+  expected <- list(
+    "geno1" = c("mix1", "mix2"),
+    "geno11" = "mix2",
+    "geno2" = "mix1"
   )
   observed <- getMixturesPerGeno(mix2genos)
   expect_equal(observed, expected)

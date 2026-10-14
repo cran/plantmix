@@ -9,6 +9,7 @@ getDesignBinaryCropMix(
   levGenos2,
   nbMixes,
   seed = NULL,
+  maxIter = 100,
   showPlots = FALSE,
   verbose = FALSE
 )
@@ -21,6 +22,8 @@ getDesignBinaryCropMix(
 \item{nbMixes}{number of mixtures}
 
 \item{seed}{seed for the pseudo-random number generator}
+
+\item{maxIter}{maximum number of iterations}
 
 \item{showPlots}{logical indicating if plots should be showed}
 
@@ -44,6 +47,9 @@ design <- getDesignBinaryCropMix(levGenos1, levGenos2, nbMixes, seed=12345)
 plotDesignCropMix(design$graph, levGenos1, levGenos2)
 ggplot(design$entropies) + aes(x=iteration, y=entropy, group=type) + geom_point() + geom_line() +
   geom_hline(yintercept = design$max_ent) + theme_bw() + facet_wrap(~ type)
+}
+\seealso{
+\code{\link{plotDesignCropMix}}
 }
 \author{
 Timothee Flutre
